@@ -219,6 +219,11 @@ func (b *Board) Copy() Board {
 
 // Get the piece at the given location.
 func (b *Board) GetPiece(x, y int) Piece {
+	// Check if the location is out of bound.
+	// If so, return an empty piece.
+	if x < 0 || x >= b.Height || y < 0 || y >= b.Width {
+		return EmptyPiece{}
+	}
 	return b.Locations[x][y]
 }
 func (b *Board) GetPieceAtLocation(location Location) Piece {
@@ -239,6 +244,7 @@ func (b *Board) GetPlayerPieces(player int) []Piece {
 }
 
 // Get all moves for the given player.
+// This function does not check if the player is in check.
 func (b *Board) GetPlayerMoves(player int) []Move {
 	pieces := b.GetPlayerPieces(player)
 	moves := make([]Move, 0)
@@ -248,6 +254,28 @@ func (b *Board) GetPlayerMoves(player int) []Move {
 	return moves
 }
 
+// Get all the legal moves for the given player.
+// This function uses GetPlayerMoves() and filters out moves that put the player in check.
+func (b *Board) GetPlayerLegalMoves(player int) []Move {
+	moves := b.GetPlayerMoves(player)
+	legalMoves := make([]Move, 0)
+	for _, move := range moves {
+		newBoard := b.Copy()
+		newBoard.MakeMove(move)
+		if !newBoard.CheckPlayerInCheck(player) {
+			legalMoves = append(legalMoves, move)
+		}
+	}
+	return legalMoves
+}
+
+// Disambiguate given a set of moves.
+// When multiple same type of pieces can move to the same location
+// TODO: Implement this function.
+func DisambiguateMoves(moves []Move) {
+
+}
+
 // Check if the given player is in check.
 func (b *Board) CheckPlayerInCheck(player int) bool {
 	// Get the king's location.
@@ -255,7 +283,7 @@ func (b *Board) CheckPlayerInCheck(player int) bool {
 	for i := 0; i < b.Height; i++ {
 		for j := 0; j < b.Width; j++ {
 			if b.Locations[i][j].GetType() == 'K' && b.Locations[i][j].GetPlayer() == player {
-				kingLoc = Location{j, i}
+				kingLoc = Location{i, j}
 			}
 		}
 	}
@@ -272,42 +300,71 @@ func (b *Board) CheckPlayerInCheck(player int) bool {
 // Move a piece on the board.
 func (b *Board) MakeMove(m Move) {
 
-	player := b.Locations[m.From.Y][m.From.X].GetPlayer()
+	player := b.Locations[m.From.X][m.From.Y].GetPlayer()
+
+	// Update the board state
+	b.LastMove = m
+
+	// Update the castling rights
+	if m.Piece == 'K' {
+		if player == 1 {
+			b.WhiteQueenSideCastle = false
+			b.WhiteKingSideCastle = false
+		} else {
+			b.BlackQueenSideCastle = false
+			b.BlackKingSideCastle = false
+		}
+	}
+	if m.Piece == 'R' {
+		if player == 1 {
+			if m.From.Y == 0 && m.From.X == 0 {
+				b.WhiteQueenSideCastle = false
+			}
+			if m.From.Y == 7 && m.From.X == 0 {
+				b.WhiteKingSideCastle = false
+			}
+		} else {
+			if m.From.Y == 0 && m.From.X == 7 {
+				b.BlackQueenSideCastle = false
+			}
+			if m.From.Y == 7 && m.From.X == 7 {
+				b.BlackKingSideCastle = false
+			}
+		}
+	}
 
 	// Special case for castling.
-	if m.Type == 'K' && m.From.X-m.To.X == 2 {
+	if m.Type == 'K' && m.From.Y-m.To.Y == 2 {
 		// Long castling.
-		b.Locations[m.From.Y][m.From.X] = EmptyPiece{}
-		b.Locations[m.From.Y][0] = EmptyPiece{}
-		b.Locations[m.To.Y][m.To.X] = PlayerPiece{player, 'K', m.To}
-		b.Locations[m.To.Y][m.To.X-1] = PlayerPiece{player, 'R', Location{m.To.X - 1, m.To.Y}}
+		b.Locations[m.From.X][m.From.Y] = EmptyPiece{}
+		b.Locations[m.From.X][0] = EmptyPiece{}
+		b.Locations[m.To.X][m.To.Y] = PlayerPiece{player, 'K', m.To}
+		b.Locations[m.To.X][m.To.Y-1] = PlayerPiece{player, 'R', Location{m.To.X, m.To.Y - 1}}
 		return
 	}
-	if m.Type == 'K' && m.From.X-m.To.X == -2 {
+	if m.Type == 'K' && m.From.Y-m.To.Y == -2 {
 		// Short castling.
-		b.Locations[m.From.Y][m.From.X] = EmptyPiece{}
-		b.Locations[m.From.Y][7] = EmptyPiece{}
-		b.Locations[m.To.Y][m.To.X] = PlayerPiece{player, 'K', m.To}
-		b.Locations[m.To.Y][m.To.X+1] = PlayerPiece{player, 'R', Location{m.To.X + 1, m.To.Y}}
+		b.Locations[m.From.X][m.From.Y] = EmptyPiece{}
+		b.Locations[m.From.X][7] = EmptyPiece{}
+		b.Locations[m.To.X][m.To.Y] = PlayerPiece{player, 'K', m.To}
+		b.Locations[m.To.X][m.To.Y+1] = PlayerPiece{player, 'R', Location{m.To.X, m.To.Y + 1}}
 		return
 	}
 
 	// Special case for en passant.
 	if m.Type == 'E' {
-		b.Locations[m.From.Y][m.From.X] = EmptyPiece{}
-		b.Locations[m.From.Y][m.To.X] = EmptyPiece{}
-		b.Locations[m.To.Y][m.To.X] = PlayerPiece{player, 'P', m.To}
+		b.Locations[m.From.X][m.From.Y] = EmptyPiece{}
+		b.Locations[m.From.X][m.To.Y] = EmptyPiece{}
+		b.Locations[m.To.X][m.To.Y] = PlayerPiece{player, 'P', m.To}
 		return
 	}
 
 	// Default case of moving / promoting / capturing.
 	if m.Type == 'M' || m.Type == 'P' || m.Type == 'C' {
-		b.Locations[m.From.Y][m.From.X] = EmptyPiece{}
-		b.Locations[m.To.Y][m.To.X] = PlayerPiece{player, m.Piece, m.To}
+		b.Locations[m.From.X][m.From.Y] = EmptyPiece{}
+		b.Locations[m.To.X][m.To.Y] = PlayerPiece{player, m.Piece, m.To}
 		return
 	}
 }
-
-// Check if the given player is in check.
 
 // Chekc if the given player is in checkmate.

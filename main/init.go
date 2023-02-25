@@ -34,21 +34,13 @@ func (g *Game) Play() {
 }
 
 func main() {
-	var board1 = InitFEN("4k3/6B1/5PR1/8/2R5/8/6N1/4K3 w - - 0 1")
+	var board1 = InitFEN("4k2r/8/8/8/8/8/8/R3K2R w KQk - 2 4")
 	board1.PrintWithBorder()
 
-	var piece1 = board1.GetPieceAtLocation(Location{X: 3, Y: 2})
-	fmt.Println(piece1)
-	var moves1 = piece1.GetMoves(&board1)
-	for _, move := range moves1 {
-		fmt.Println(move.ToString())
-	}
-
-	fmt.Println()
-	var piece2 = board1.GetPieceAtLocation(Location{X: 5, Y: 6})
-	fmt.Println(piece2)
-	var moves2 = piece2.GetMoves(&board1)
-	for _, move := range moves2 {
+	whiteKing := board1.GetPieceAtLocation(Location{X: 0, Y: 4})
+	fmt.Println(whiteKing)
+	kingMoves := whiteKing.GetMoves(&board1)
+	for _, move := range kingMoves {
 		fmt.Println(move.ToString())
 	}
 

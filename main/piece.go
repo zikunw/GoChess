@@ -30,20 +30,21 @@ func (p PlayerPiece) GetValue() int {
 }
 
 // GetMoves returns a list of all possible moves for the piece.
+// This function does not check if the move will put the player in check.
 func (p PlayerPiece) GetMoves(b *Board) []Move {
 	switch p.Type {
 	case 'P':
 		return p.GetPawnMoves(b)
 	case 'R':
 		return p.GetRookMoves(b)
-		//case 'N':
-		//	return p.GetKnightMoves()
-		//case 'B':
-		//	return p.GetBishopMoves()
-		//case 'Q':
-		//	return p.GetQueenMoves()
-		//case 'K':
-		//	return p.GetKingMoves()
+	case 'N':
+		return p.GetKnightMoves(b)
+	case 'B':
+		return p.GetBishopMoves(b)
+	case 'Q':
+		return p.GetQueenMoves(b)
+	case 'K':
+		return p.GetKingMoves(b)
 	}
 	return []Move{}
 }
@@ -157,8 +158,6 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 		}
 
 	} else { // Black pawn
-		// TODO: The X and Y is flipped for black pawns. Fix this.
-		Debug(2, "Pawn is black.")
 		// A pawn can move two spaces from a starting position.
 		if p.Location.X == 7 {
 			if b.GetPiece(p.Location.X-1, p.Location.Y).IsEmpty() {
@@ -356,6 +355,156 @@ func (p PlayerPiece) GetRookMoves(b *Board) []Move {
 	return moves
 }
 
+// Get all the possible moves for a knight.
+func (p PlayerPiece) GetKnightMoves(b *Board) []Move {
+	moves := []Move{}
+
+	// Possible moves
+	possibleMoves := []Location{
+		{p.Location.X + 1, p.Location.Y + 2},
+		{p.Location.X + 1, p.Location.Y - 2},
+		{p.Location.X - 1, p.Location.Y + 2},
+		{p.Location.X - 1, p.Location.Y - 2},
+		{p.Location.X + 2, p.Location.Y + 1},
+		{p.Location.X + 2, p.Location.Y - 1},
+		{p.Location.X - 2, p.Location.Y + 1},
+		{p.Location.X - 2, p.Location.Y - 1},
+	}
+	for _, move := range possibleMoves {
+		if move.X >= 0 && move.X < 8 && move.Y >= 0 && move.Y < 8 {
+			piece := b.GetPiece(move.X, move.Y)
+			if piece.IsEmpty() {
+				moves = append(moves, Move{'M', 'N', false, p.Location, move})
+			} else {
+				if piece.GetPlayer() != p.Player {
+					moves = append(moves, Move{'C', 'N', false, p.Location, move})
+				}
+			}
+		}
+	}
+	return moves
+}
+
+// Get all the possible moves for a bishop.
+func (p PlayerPiece) GetBishopMoves(b *Board) []Move {
+	moves := []Move{}
+	// Displacement
+	displacement := []Location{
+		{1, 1},
+		{1, -1},
+		{-1, 1},
+		{-1, -1},
+	}
+	for _, d := range displacement {
+		for i := 1; i < 8; i++ {
+			move := Location{p.Location.X + d.X*i, p.Location.Y + d.Y*i}
+			if move.X >= 0 && move.X < 8 && move.Y >= 0 && move.Y < 8 {
+				piece := b.GetPiece(move.X, move.Y)
+				if piece.IsEmpty() {
+					moves = append(moves, Move{'M', 'B', false, p.Location, move})
+				} else {
+					if piece.GetPlayer() != p.Player {
+						moves = append(moves, Move{'C', 'B', false, p.Location, move})
+					}
+					break // stop checking this direction
+				}
+			} else {
+				break // stop checking this direction
+			}
+		}
+	}
+	return moves
+}
+
+// Get all the possible moves for a queen.
+func (p PlayerPiece) GetQueenMoves(b *Board) []Move {
+	moves := []Move{}
+	// A queen can move like a rook or a bishop
+	moves = append(moves, p.GetRookMoves(b)...)
+	moves = append(moves, p.GetBishopMoves(b)...)
+	// Change the piece type to queen
+	for i := range moves {
+		moves[i].Piece = 'Q'
+	}
+	return moves
+}
+
+// Get all the possible moves for a king.
+func (p PlayerPiece) GetKingMoves(b *Board) []Move {
+	moves := []Move{}
+	// Possible moves
+	possibleMoves := []Location{
+		{p.Location.X + 1, p.Location.Y + 1},
+		{p.Location.X + 1, p.Location.Y - 1},
+		{p.Location.X - 1, p.Location.Y + 1},
+		{p.Location.X - 1, p.Location.Y - 1},
+		{p.Location.X + 1, p.Location.Y},
+		{p.Location.X - 1, p.Location.Y},
+		{p.Location.X, p.Location.Y + 1},
+		{p.Location.X, p.Location.Y - 1},
+	}
+	for _, move := range possibleMoves {
+		if move.X >= 0 && move.X < 8 && move.Y >= 0 && move.Y < 8 {
+			piece := b.GetPieceAtLocation(move)
+			if piece.IsEmpty() {
+				moves = append(moves, Move{'M', 'K', false, p.Location, move})
+			} else {
+				if piece.GetPlayer() != p.Player {
+					moves = append(moves, Move{'C', 'K', false, p.Location, move})
+				}
+			}
+		}
+	}
+	// Castling
+	// FIXME: This will cause stack overflow for some reason
+	// if p.Player == 1 {
+	// 	if b.WhiteKingSideCastle {
+	// 		// Check if there are pieces between the king and the rook
+	// 		if b.GetPiece(0, 5).IsEmpty() && b.GetPiece(0, 6).IsEmpty() {
+	// 			// Check if the king is in check
+	// 			if !b.CheckPlayerInCheck(1) {
+	// 				// Append the move
+	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 6}})
+	// 			}
+	// 		}
+	// 	}
+	// 	if b.WhiteQueenSideCastle {
+	// 		// Check if there are pieces between the king and the rook
+	// 		if b.GetPiece(0, 3).IsEmpty() && b.GetPiece(0, 2).IsEmpty() && b.GetPiece(0, 1).IsEmpty() {
+	// 			// Check if the king is in check
+	// 			if !b.CheckPlayerInCheck(1) {
+	// 				// Append the move
+	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 2}})
+	// 			}
+	// 		}
+	// 	}
+	// } else {
+	// 	if b.BlackKingSideCastle {
+	// 		// Check if there are pieces between the king and the rook
+	// 		if b.GetPiece(7, 5).IsEmpty() && b.GetPiece(7, 6).IsEmpty() {
+	// 			// Check if the king is in check
+	// 			if !b.CheckPlayerInCheck(2) {
+	// 				// Append the move
+	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 6}})
+	// 			}
+	// 		}
+	// 	}
+	// 	if b.BlackQueenSideCastle {
+	// 		// Check if there are pieces between the king and the rook
+	// 		if b.GetPiece(7, 3).IsEmpty() && b.GetPiece(7, 2).IsEmpty() && b.GetPiece(7, 1).IsEmpty() {
+	// 			// Check if the king is in check
+	// 			if !b.CheckPlayerInCheck(2) {
+	// 				// Append the move
+	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 2}})
+	// 			}
+	// 		}
+	// 	}
+
+	// }
+
+	return moves
+}
+
 func (p PlayerPiece) GetChar() rune {
 	switch p.Type {
 	case 'P':
@@ -486,9 +635,10 @@ func LocationToGrid(l Location) string {
 }
 
 // grid location to x,y
+// TODO: check if this is correct
 func GridToLocation(grid string) Location {
 	//return int(grid[0] - 'a'), int(grid[1] - '1')
-	return Location{int(grid[0] - 'a'), int(grid[1] - '1')}
+	return Location{int(grid[1] - '1'), int(grid[0] - 'a')}
 }
 
 // Check if a given move is check.
