@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 type Game struct {
 	Board Board
 	State GameState
@@ -29,18 +27,12 @@ func (g *Game) Play() {
 	if g.State == 2 || g.State == 3 || g.State == 4 {
 		return
 	}
-
+	// Perform game logic
+	// TODO
 }
 
 func main() {
-	var board Board
-	board.Init()
-	fmt.Println("Board initialized.")
-	board.Print()
+	var board1 = InitFEN("rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2 ")
+	board1.Print()
 
-	fmt.Println()
-	fmt.Println("Test what the pawn can do:")
-	fmt.Println(board.Locations[1][0])
-	moves := board.Locations[1][0].GetMoves(&board)
-	fmt.Println(moves)
 }

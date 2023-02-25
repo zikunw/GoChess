@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Board struct {
 	Width  int
@@ -11,6 +14,24 @@ type Board struct {
 
 	// Keep track of the last move.
 	LastMove Move
+
+	// Keep track of whose turn is it
+	// 1 - white player's turn
+	// 2 - black player's turn
+	// 3 - white player won
+	// 4 - black player won
+	// 5 - draw
+	State int
+
+	// Castling rights
+	WhiteQueenSideCastle bool
+	WhiteKingSideCastle  bool
+	BlackQueenSideCastle bool
+	BlackKingSideCastle  bool
+
+	// Keep track of the last 50 moves.
+	// This is used to determine if the game is a draw.
+	// TODO
 }
 
 type Location struct {
@@ -60,6 +81,73 @@ func (b *Board) Init() {
 	for i := 0; i < b.Width; i++ {
 		b.Locations[6][i] = PlayerPiece{2, 'P', Location{6, i}}
 	}
+}
+
+// decode FEN string and return a board based on the string
+// TODO: Not complete, need update the state in Board struct based on the FEN string
+func InitFEN(fen string) Board {
+	var b Board
+	b.Height = 8
+	b.Width = 8
+
+	// Init with empty move
+	b.LastMove = Move{
+		Type: ' ',
+	}
+
+	// Initialize the board with empty pieces.
+	b.Locations = make([][]Piece, b.Height)
+	for i := 0; i < b.Height; i++ {
+		b.Locations[i] = make([]Piece, b.Width)
+		for j := 0; j < b.Width; j++ {
+			b.Locations[i][j] = EmptyPiece{}
+		}
+	}
+
+	// Decode FEN string
+	// FEN string is in the format:
+	// <piece placement> <active color> <castling availability> <en passant target square> <halfmove clock> <fullmove number>
+
+	// Split the string into 6 parts
+	fenParts := strings.Split(fen, " ")
+
+	// Piece placement
+	piecePlacement := fenParts[0]
+	ranks := strings.Split(piecePlacement, "/")
+	for i := 0; i < b.Height; i++ {
+		rank := ranks[7-i]
+		file := 0
+		for _, char := range rank {
+			if char >= '1' && char <= '8' {
+				file += int(char - '0')
+			} else {
+				// Check player
+				if char >= 'A' && char <= 'Z' {
+					b.Locations[i][file] = PlayerPiece{1, char, Location{i, file}}
+				} else {
+					b.Locations[i][file] = PlayerPiece{2, char & '_', Location{i, file}}
+				}
+				file++
+			}
+		}
+	}
+
+	// Active color
+	activeColor := fenParts[1]
+	if activeColor == "w" {
+		b.State = 1
+	} else {
+		b.State = 2
+	}
+
+	// Castling availability
+	castlingAvailability := fenParts[2]
+	b.WhiteKingSideCastle = strings.Contains(castlingAvailability, "K")
+	b.WhiteQueenSideCastle = strings.Contains(castlingAvailability, "Q")
+	b.BlackKingSideCastle = strings.Contains(castlingAvailability, "k")
+	b.BlackQueenSideCastle = strings.Contains(castlingAvailability, "q")
+
+	return b
 }
 
 func (b *Board) Print() {
