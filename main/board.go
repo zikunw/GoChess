@@ -49,6 +49,13 @@ func (b *Board) Init() {
 	b.Height = 8
 	b.Width = 8
 
+	b.State = 1
+
+	b.WhiteKingSideCastle = true
+	b.WhiteQueenSideCastle = true
+	b.BlackKingSideCastle = true
+	b.BlackQueenSideCastle = true
+
 	// Init with empty move
 	b.LastMove = Move{
 		Type: ' ',
@@ -288,6 +295,8 @@ func (b *Board) GetPlayerLegalMoves(player int) []Move {
 // When multiple same type of pieces can move to the same location
 // TODO: Implement this function.
 func DisambiguateMoves(moves []Move) {
+	// Check if there are multiple same type of pieces that can move to the same location.
+	// If so, disambiguate the moves.
 
 }
 
@@ -382,4 +391,28 @@ func (b *Board) MakeMove(m Move) {
 	}
 }
 
-// Chekc if the given player is in checkmate.
+// Check if the given player is in checkmate.
+// TODO: Test this function
+func (b *Board) CheckPlayerInCheckmate(player int) bool {
+	if !b.CheckPlayerInCheck(player) {
+		return false
+	}
+	legalMoves := b.GetPlayerLegalMoves(player)
+	if len(legalMoves) == 0 {
+		return true
+	}
+	return false
+}
+
+// Check if the given player is in stalemate.
+// TODO: Test this function
+func (b *Board) CheckPlayerInStalemate(player int) bool {
+	if b.CheckPlayerInCheck(player) {
+		return false
+	}
+	legalMoves := b.GetPlayerLegalMoves(player)
+	if len(legalMoves) == 0 {
+		return true
+	}
+	return false
+}

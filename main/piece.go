@@ -159,7 +159,7 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 
 	} else { // Black pawn
 		// A pawn can move two spaces from a starting position.
-		if p.Location.X == 7 {
+		if p.Location.X == 6 {
 			if b.GetPiece(p.Location.X-1, p.Location.Y).IsEmpty() {
 				moves = append(moves, Move{
 					Type:             'M',
@@ -180,7 +180,7 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 			}
 		}
 		// A pawn can move one space forward.
-		if p.Location.X > 1 && p.Location.X != 7 {
+		if p.Location.X > 1 && p.Location.X != 6 {
 			if b.GetPiece(p.Location.X-1, p.Location.Y).IsEmpty() {
 				moves = append(moves, Move{
 					Type:             'M',
@@ -456,7 +456,6 @@ func (p PlayerPiece) GetKingMoves(b *Board) []Move {
 		}
 	}
 	//Castling
-	//FIXME: This will cause stack overflow for some reason
 	if b.CheckPlayerInCheck(p.Player) {
 		return moves
 	}
@@ -464,26 +463,26 @@ func (p PlayerPiece) GetKingMoves(b *Board) []Move {
 		if b.WhiteKingSideCastle {
 			// Check if there are pieces between the king and the rook
 			if b.GetPiece(0, 5).IsEmpty() && b.GetPiece(0, 6).IsEmpty() {
-				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 6}})
+				moves = append(moves, Move{'K', 'K', true, p.Location, Location{0, 6}})
 			}
 		}
 		if b.WhiteQueenSideCastle {
 			// Check if there are pieces between the king and the rook
 			if b.GetPiece(0, 3).IsEmpty() && b.GetPiece(0, 2).IsEmpty() && b.GetPiece(0, 1).IsEmpty() {
-				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 2}})
+				moves = append(moves, Move{'K', 'K', true, p.Location, Location{0, 2}})
 			}
 		}
 	} else {
 		if b.BlackKingSideCastle {
 			// Check if there are pieces between the king and the rook
 			if b.GetPiece(7, 5).IsEmpty() && b.GetPiece(7, 6).IsEmpty() {
-				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 6}})
+				moves = append(moves, Move{'K', 'K', true, p.Location, Location{7, 6}})
 			}
 		}
 		if b.BlackQueenSideCastle {
 			// Check if there are pieces between the king and the rook
 			if b.GetPiece(7, 3).IsEmpty() && b.GetPiece(7, 2).IsEmpty() && b.GetPiece(7, 1).IsEmpty() {
-				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 2}})
+				moves = append(moves, Move{'K', 'K', true, p.Location, Location{7, 2}})
 			}
 		}
 	}
@@ -571,6 +570,18 @@ type Move struct {
 	IsDisambiguation bool // If true, the move is disambiguated by the FromX and FromY fields.
 	From             Location
 	To               Location
+}
+
+// Detect if a move (from, to) is valid.
+// Return (isValid, move)
+func ValidMove(from Location, to Location, player int, b *Board) (bool, Move) {
+	allValidMoves := b.GetPlayerLegalMoves(player)
+	for _, move := range allValidMoves {
+		if move.From == from && move.To == to {
+			return true, move
+		}
+	}
+	return false, Move{' ', ' ', false, Location{0, 0}, Location{0, 0}}
 }
 
 // Translate the move to algebraic notation
