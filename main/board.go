@@ -169,6 +169,7 @@ func InitFEN(fen string) Board {
 	return b
 }
 
+// Print the board.
 func (b *Board) Print() {
 	for i := b.Height - 1; i >= 0; i-- {
 		for j := 0; j < b.Width; j++ {
@@ -176,6 +177,28 @@ func (b *Board) Print() {
 		}
 		fmt.Println()
 	}
+}
+
+// Print the board with border.
+func (b *Board) PrintWithBorder() {
+	fmt.Print("  ")
+	for i := 0; i < b.Width; i++ {
+		fmt.Printf("%c ", 'a'+i)
+	}
+	fmt.Println()
+	for i := b.Height - 1; i >= 0; i-- {
+		fmt.Printf("%d ", i+1)
+		for j := 0; j < b.Width; j++ {
+			fmt.Printf("%c ", b.Locations[i][j].GetChar())
+		}
+		fmt.Printf("%d", i+1)
+		fmt.Println()
+	}
+	fmt.Print("  ")
+	for i := 0; i < b.Width; i++ {
+		fmt.Printf("%c ", 'a'+i)
+	}
+	fmt.Println()
 }
 
 // Deep copy the board.
@@ -197,6 +220,9 @@ func (b *Board) Copy() Board {
 // Get the piece at the given location.
 func (b *Board) GetPiece(x, y int) Piece {
 	return b.Locations[x][y]
+}
+func (b *Board) GetPieceAtLocation(location Location) Piece {
+	return b.Locations[location.X][location.Y]
 }
 
 // Get all pieces of the given player.

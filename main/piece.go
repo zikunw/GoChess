@@ -34,8 +34,8 @@ func (p PlayerPiece) GetMoves(b *Board) []Move {
 	switch p.Type {
 	case 'P':
 		return p.GetPawnMoves(b)
-		//case 'R':
-		//	return p.GetRookMoves()
+	case 'R':
+		return p.GetRookMoves(b)
 		//case 'N':
 		//	return p.GetKnightMoves()
 		//case 'B':
@@ -295,6 +295,67 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 	return moves
 }
 
+// Get all the possible moves for a rook.
+func (p PlayerPiece) GetRookMoves(b *Board) []Move {
+	moves := []Move{}
+	rowNum := p.Location.X
+	colNum := p.Location.Y
+
+	// Check all the sqaures in the same row
+	// left
+	for i := p.Location.Y - 1; i >= 0; i-- {
+		piece := b.GetPiece(rowNum, i)
+		if piece.IsEmpty() {
+			moves = append(moves, Move{'M', 'R', false, p.Location, Location{rowNum, i}})
+		} else {
+			if piece.GetPlayer() != p.Player {
+				moves = append(moves, Move{'C', 'R', false, p.Location, Location{rowNum, i}})
+			}
+			break // stop checking this direction
+		}
+	}
+	// right
+	for i := p.Location.Y + 1; i < 8; i++ {
+		piece := b.GetPiece(rowNum, i)
+		if piece.IsEmpty() {
+			moves = append(moves, Move{'M', 'R', false, p.Location, Location{rowNum, i}})
+		} else {
+			if piece.GetPlayer() != p.Player {
+				moves = append(moves, Move{'C', 'R', false, p.Location, Location{rowNum, i}})
+			}
+			break // stop checking this direction
+		}
+	}
+
+	// Check all the squares in the same column
+	// up
+	for i := p.Location.X - 1; i >= 0; i-- {
+		piece := b.GetPiece(i, colNum)
+		if piece.IsEmpty() {
+			moves = append(moves, Move{'M', 'R', false, p.Location, Location{i, colNum}})
+		} else {
+			if piece.GetPlayer() != p.Player {
+				moves = append(moves, Move{'C', 'R', false, p.Location, Location{i, colNum}})
+			}
+			break // stop checking this direction
+		}
+	}
+	// down
+	for i := p.Location.X + 1; i < 8; i++ {
+		piece := b.GetPiece(i, colNum)
+		if piece.IsEmpty() {
+			moves = append(moves, Move{'M', 'R', false, p.Location, Location{i, colNum}})
+		} else {
+			if piece.GetPlayer() != p.Player {
+				moves = append(moves, Move{'C', 'R', false, p.Location, Location{i, colNum}})
+			}
+			break // stop checking this direction
+		}
+	}
+
+	return moves
+}
+
 func (p PlayerPiece) GetChar() rune {
 	switch p.Type {
 	case 'P':
@@ -421,7 +482,7 @@ func (m Move) ToString() string {
 
 // x,y to grid location
 func LocationToGrid(l Location) string {
-	return string('a'+l.X) + string('1'+l.Y)
+	return string('a'+l.Y) + string('1'+l.X)
 }
 
 // grid location to x,y
