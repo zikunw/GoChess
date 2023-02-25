@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -29,9 +30,14 @@ type Board struct {
 	BlackQueenSideCastle bool
 	BlackKingSideCastle  bool
 
-	// Keep track of the last 50 moves.
-	// This is used to determine if the game is a draw.
-	// TODO
+	// En passant target square
+	EnPassantTargetSquare Location
+
+	// Halfmove clock
+	HalfmoveClock int
+
+	// Fullmove number
+	FullmoveNumber int
 }
 
 type Location struct {
@@ -84,7 +90,6 @@ func (b *Board) Init() {
 }
 
 // decode FEN string and return a board based on the string
-// TODO: Not complete, need update the state in Board struct based on the FEN string
 func InitFEN(fen string) Board {
 	var b Board
 	b.Height = 8
@@ -146,6 +151,20 @@ func InitFEN(fen string) Board {
 	b.WhiteQueenSideCastle = strings.Contains(castlingAvailability, "Q")
 	b.BlackKingSideCastle = strings.Contains(castlingAvailability, "k")
 	b.BlackQueenSideCastle = strings.Contains(castlingAvailability, "q")
+
+	// En passant target square
+	enPassantTargetSquare := fenParts[3]
+	if enPassantTargetSquare != "-" {
+		b.EnPassantTargetSquare = Location{int(enPassantTargetSquare[1] - '1'), int(enPassantTargetSquare[0] - 'a')}
+	}
+
+	// Halfmove clock
+	halfmoveClock := fenParts[4]
+	b.HalfmoveClock, _ = strconv.Atoi(halfmoveClock)
+
+	// Fullmove number
+	fullmoveNumber := fenParts[5]
+	b.FullmoveNumber, _ = strconv.Atoi(fullmoveNumber)
 
 	return b
 }
