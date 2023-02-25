@@ -39,28 +39,8 @@ func main() {
 	board.Print()
 
 	fmt.Println()
-	fmt.Print("White Move:")
-	m := Move{
-		Type:             'M',
-		Piece:            'P',
-		IsDisambiguation: false,
-		From:             Location{4, 1},
-		To:               Location{4, 3},
-	}
-	fmt.Println(m.ToString())
-	board.MakeMove(m)
-	board.Print()
-
-	fmt.Println()
-	fmt.Print("Black Move:")
-	m = Move{
-		Type:             'M',
-		Piece:            'P',
-		IsDisambiguation: false,
-		From:             Location{4, 6},
-		To:               Location{4, 4},
-	}
-	fmt.Println(m.ToString())
-	board.MakeMove(m)
-	board.Print()
+	fmt.Println("Test what the pawn can do:")
+	fmt.Println(board.Locations[1][0])
+	moves := board.Locations[1][0].GetMoves(&board)
+	fmt.Println(moves)
 }

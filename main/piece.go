@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type PlayerPiece struct {
 	Player   int  // 1 - white player, 2 - black player
 	Type     rune // 'P' - pawn, 'R' - rook, 'N' - knight, 'B' - bishop, 'Q' - queen, 'K' - king
@@ -29,20 +31,20 @@ func (p PlayerPiece) GetValue() int {
 
 // GetMoves returns a list of all possible moves for the piece.
 func (p PlayerPiece) GetMoves(b *Board) []Move {
-	//switch p.Type {
-	//case 'P':
-	//	return p.GetPawnMoves()
-	//case 'R':
-	//	return p.GetRookMoves()
-	//case 'N':
-	//	return p.GetKnightMoves()
-	//case 'B':
-	//	return p.GetBishopMoves()
-	//case 'Q':
-	//	return p.GetQueenMoves()
-	//case 'K':
-	//	return p.GetKingMoves()
-	//}
+	switch p.Type {
+	case 'P':
+		return p.GetPawnMoves(b)
+		//case 'R':
+		//	return p.GetRookMoves()
+		//case 'N':
+		//	return p.GetKnightMoves()
+		//case 'B':
+		//	return p.GetBishopMoves()
+		//case 'Q':
+		//	return p.GetQueenMoves()
+		//case 'K':
+		//	return p.GetKingMoves()
+	}
 	return []Move{}
 }
 
@@ -53,40 +55,40 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 
 	if p.Player == 1 { // White pawn
 		// A pawn can move two spaces from a starting position.
-		if p.Location.Y == 1 {
-			if b.GetPiece(p.Location.X, p.Location.Y+1).IsEmpty() {
+		if p.Location.X == 1 {
+			if b.GetPiece(p.Location.X+1, p.Location.Y).IsEmpty() {
 				moves = append(moves, Move{
 					Type:             'M',
 					Piece:            'P',
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y + 1},
+					To:               Location{p.Location.X + 1, p.Location.Y},
 				})
-			}
-			if b.GetPiece(p.Location.X, p.Location.Y+2).IsEmpty() {
-				moves = append(moves, Move{
-					Type:             'M',
-					Piece:            'P',
-					IsDisambiguation: false,
-					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y + 2},
-				})
+				if b.GetPiece(p.Location.X+2, p.Location.Y).IsEmpty() {
+					moves = append(moves, Move{
+						Type:             'M',
+						Piece:            'P',
+						IsDisambiguation: false,
+						From:             p.Location,
+						To:               Location{p.Location.X + 2, p.Location.Y},
+					})
+				}
 			}
 		}
 		// A pawn can move one space forward.
-		if p.Location.Y < 6 && p.Location.Y != 1 {
-			if b.GetPiece(p.Location.X, p.Location.Y+1).IsEmpty() {
+		if p.Location.X < 6 && p.Location.X != 1 {
+			if b.GetPiece(p.Location.X+1, p.Location.Y).IsEmpty() {
 				moves = append(moves, Move{
 					Type:             'M',
 					Piece:            'P',
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y + 1},
+					To:               Location{p.Location.X + 1, p.Location.Y},
 				})
 			}
 		}
 		// A pawn can promote to any piece except a king.
-		if p.Location.Y == 6 && b.GetPiece(p.Location.X, p.Location.Y+1).IsEmpty() {
+		if p.Location.X == 6 && b.GetPiece(p.Location.X+1, p.Location.Y).IsEmpty() {
 			const promotionPieces = "QRBN"
 			for _, piece := range promotionPieces {
 				// add the move to the list of moves
@@ -95,28 +97,28 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 					Piece:            piece,
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y + 1},
+					To:               Location{p.Location.X + 1, p.Location.Y},
 				})
 			}
 		}
 
 		// A pawn can move one space diagonally forward to capture an enemy piece.
-		if p.Location.Y < 6 {
+		if p.Location.X < 6 {
 			// left
-			if p.Location.X > 0 {
-				leftPiece := b.GetPiece(p.Location.X-1, p.Location.Y+1)
+			if p.Location.Y > 0 {
+				leftPiece := b.GetPiece(p.Location.X+1, p.Location.Y-1)
 				if !leftPiece.IsEmpty() && leftPiece.GetPlayer() != p.Player {
 					moves = append(moves, Move{
 						Type:             'C',
 						Piece:            'P',
 						IsDisambiguation: false,
 						From:             p.Location,
-						To:               Location{p.Location.X - 1, p.Location.Y + 1},
+						To:               Location{p.Location.X + 1, p.Location.Y - 1},
 					})
 				}
 			}
 			// right
-			if p.Location.X < 7 {
+			if p.Location.Y < 7 {
 				rightPiece := b.GetPiece(p.Location.X+1, p.Location.Y+1)
 				if !rightPiece.IsEmpty() && rightPiece.GetPlayer() != p.Player {
 					moves = append(moves, Move{
@@ -133,17 +135,17 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 		// En passant (dont you dare forget this)
 		if b.LastMove.Type == 'M' && b.LastMove.Piece == 'P' {
 			// left en passant
-			if p.Location.Y == 5 && b.LastMove.To.X == p.Location.X-1 && b.LastMove.To.Y == p.Location.Y {
+			if p.Location.X == 5 && b.LastMove.To.Y == p.Location.Y-1 && b.LastMove.To.X == p.Location.X {
 				moves = append(moves, Move{
 					Type:             'E',
 					Piece:            'P',
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X - 1, p.Location.Y + 1},
+					To:               Location{p.Location.X + 1, p.Location.Y - 1},
 				})
 			}
 			// right en passant
-			if p.Location.Y == 5 && b.LastMove.To.X == p.Location.X+1 && b.LastMove.To.Y == p.Location.Y {
+			if p.Location.X == 5 && b.LastMove.To.Y == p.Location.Y+1 && b.LastMove.To.X == p.Location.X {
 				moves = append(moves, Move{
 					Type:             'E',
 					Piece:            'P',
@@ -155,41 +157,43 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 		}
 
 	} else { // Black pawn
+		// TODO: The X and Y is flipped for black pawns. Fix this.
+		Debug(2, "Pawn is black.")
 		// A pawn can move two spaces from a starting position.
-		if p.Location.Y == 7 {
-			if b.GetPiece(p.Location.X, p.Location.Y-1).IsEmpty() {
+		if p.Location.X == 7 {
+			if b.GetPiece(p.Location.X-1, p.Location.Y).IsEmpty() {
 				moves = append(moves, Move{
 					Type:             'M',
 					Piece:            'P',
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y - 1},
+					To:               Location{p.Location.X - 1, p.Location.Y},
 				})
 			}
-			if b.GetPiece(p.Location.X, p.Location.Y-2).IsEmpty() {
+			if b.GetPiece(p.Location.X-2, p.Location.Y).IsEmpty() {
 				moves = append(moves, Move{
 					Type:             'M',
 					Piece:            'P',
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y - 2},
+					To:               Location{p.Location.X - 2, p.Location.Y},
 				})
 			}
 		}
 		// A pawn can move one space forward.
-		if p.Location.Y > 1 && p.Location.Y != 7 {
-			if b.GetPiece(p.Location.X, p.Location.Y-1).IsEmpty() {
+		if p.Location.X > 1 && p.Location.X != 7 {
+			if b.GetPiece(p.Location.X-1, p.Location.Y).IsEmpty() {
 				moves = append(moves, Move{
 					Type:             'M',
 					Piece:            'P',
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y - 1},
+					To:               Location{p.Location.X - 1, p.Location.Y},
 				})
 			}
 		}
 		// A pawn can promote to any piece except a king.
-		if p.Location.Y == 1 && b.GetPiece(p.Location.X, p.Location.Y-1).IsEmpty() {
+		if p.Location.X == 1 && b.GetPiece(p.Location.X-1, p.Location.Y).IsEmpty() {
 			const promotionPieces = "QRBN"
 			for _, piece := range promotionPieces {
 				// add the move to the list of moves
@@ -198,19 +202,19 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 					Piece:            piece,
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X, p.Location.Y - 1},
+					To:               Location{p.Location.X - 1, p.Location.Y},
 				})
 			}
 		}
 
 		// A pawn can move one space diagonally forward to capture an enemy piece.
-		if p.Location.Y > 0 {
+		if p.Location.X > 0 {
 			// left
-			if p.Location.X > 0 {
-				leftPiece := b.GetPiece(p.Location.X-1, p.Location.Y+1)
+			if p.Location.Y > 0 {
+				leftPiece := b.GetPiece(p.Location.X-1, p.Location.Y-1)
 				if !leftPiece.IsEmpty() && leftPiece.GetPlayer() != p.Player {
 					// check if the pawn can be promoted
-					if p.Location.Y == 1 {
+					if p.Location.X == 1 {
 						const promotionPieces = "QRBN"
 						for _, piece := range promotionPieces {
 							// add the move to the list of moves
@@ -235,10 +239,10 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 			}
 			// right
 			if p.Location.X < 7 {
-				rightPiece := b.GetPiece(p.Location.X+1, p.Location.Y+1)
+				rightPiece := b.GetPiece(p.Location.X-1, p.Location.Y+1)
 				if !rightPiece.IsEmpty() && rightPiece.GetPlayer() != p.Player {
 					// check if the pawn can be promoted
-					if p.Location.Y == 1 {
+					if p.Location.X == 1 {
 						const promotionPieces = "QRBN"
 						for _, piece := range promotionPieces {
 							// add the move to the list of moves
@@ -247,7 +251,7 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 								Piece:            piece,
 								IsDisambiguation: false,
 								From:             p.Location,
-								To:               Location{p.Location.X + 1, p.Location.Y - 1},
+								To:               Location{p.Location.X - 1, p.Location.Y + 1},
 							})
 						}
 					} else {
@@ -256,7 +260,7 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 							Piece:            'P',
 							IsDisambiguation: false,
 							From:             p.Location,
-							To:               Location{p.Location.X + 1, p.Location.Y - 1},
+							To:               Location{p.Location.X - 1, p.Location.Y + 1},
 						})
 					}
 				}
@@ -266,7 +270,7 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 		// En passant (dont you dare forget this)
 		if b.LastMove.Type == 'M' && b.LastMove.Piece == 'P' {
 			// left en passant
-			if p.Location.Y == 4 && b.LastMove.To.X == p.Location.X-1 && b.LastMove.To.Y == p.Location.Y {
+			if p.Location.X == 4 && b.LastMove.To.Y == p.Location.Y-1 && b.LastMove.To.X == p.Location.X {
 				moves = append(moves, Move{
 					Type:             'E',
 					Piece:            'P',
@@ -276,13 +280,13 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 				})
 			}
 			// right en passant
-			if p.Location.Y == 4 && b.LastMove.To.X == p.Location.X+1 && b.LastMove.To.Y == p.Location.Y {
+			if p.Location.X == 4 && b.LastMove.To.Y == p.Location.Y+1 && b.LastMove.To.X == p.Location.X {
 				moves = append(moves, Move{
 					Type:             'E',
 					Piece:            'P',
 					IsDisambiguation: false,
 					From:             p.Location,
-					To:               Location{p.Location.X + 1, p.Location.Y - 1},
+					To:               Location{p.Location.X - 1, p.Location.Y + 1},
 				})
 			}
 		}
@@ -333,6 +337,10 @@ func (p PlayerPiece) GetChar() rune {
 	return ' '
 }
 
+func (p PlayerPiece) String() string {
+	return fmt.Sprintf("[Player Piece] Player: %d, Type: %c, X: %d, Y: %d", p.Player, p.Type, p.Location.X, p.Location.Y)
+}
+
 type EmptyPiece struct {
 }
 
@@ -342,6 +350,7 @@ func (p EmptyPiece) GetType() rune            { return ' ' }
 func (p EmptyPiece) GetValue() int            { return 0 }
 func (p EmptyPiece) GetMoves(b *Board) []Move { return []Move{} }
 func (p EmptyPiece) GetChar() rune            { return ' ' }
+func (p EmptyPiece) String() string           { return "[Empty Piece]" }
 
 type Piece interface {
 	// Check if empty.
@@ -356,6 +365,8 @@ type Piece interface {
 	GetMoves(*Board) []Move
 	// Return unicode character for this piece.
 	GetChar() rune
+	// to string
+	String() string
 }
 
 type Move struct {

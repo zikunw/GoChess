@@ -89,7 +89,7 @@ func (b *Board) Copy() Board {
 
 // Get the piece at the given location.
 func (b *Board) GetPiece(x, y int) Piece {
-	return b.Locations[y][x]
+	return b.Locations[x][y]
 }
 
 // Get all pieces of the given player.
