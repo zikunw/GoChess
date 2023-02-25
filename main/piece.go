@@ -455,52 +455,38 @@ func (p PlayerPiece) GetKingMoves(b *Board) []Move {
 			}
 		}
 	}
-	// Castling
-	// FIXME: This will cause stack overflow for some reason
-	// if p.Player == 1 {
-	// 	if b.WhiteKingSideCastle {
-	// 		// Check if there are pieces between the king and the rook
-	// 		if b.GetPiece(0, 5).IsEmpty() && b.GetPiece(0, 6).IsEmpty() {
-	// 			// Check if the king is in check
-	// 			if !b.CheckPlayerInCheck(1) {
-	// 				// Append the move
-	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 6}})
-	// 			}
-	// 		}
-	// 	}
-	// 	if b.WhiteQueenSideCastle {
-	// 		// Check if there are pieces between the king and the rook
-	// 		if b.GetPiece(0, 3).IsEmpty() && b.GetPiece(0, 2).IsEmpty() && b.GetPiece(0, 1).IsEmpty() {
-	// 			// Check if the king is in check
-	// 			if !b.CheckPlayerInCheck(1) {
-	// 				// Append the move
-	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 2}})
-	// 			}
-	// 		}
-	// 	}
-	// } else {
-	// 	if b.BlackKingSideCastle {
-	// 		// Check if there are pieces between the king and the rook
-	// 		if b.GetPiece(7, 5).IsEmpty() && b.GetPiece(7, 6).IsEmpty() {
-	// 			// Check if the king is in check
-	// 			if !b.CheckPlayerInCheck(2) {
-	// 				// Append the move
-	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 6}})
-	// 			}
-	// 		}
-	// 	}
-	// 	if b.BlackQueenSideCastle {
-	// 		// Check if there are pieces between the king and the rook
-	// 		if b.GetPiece(7, 3).IsEmpty() && b.GetPiece(7, 2).IsEmpty() && b.GetPiece(7, 1).IsEmpty() {
-	// 			// Check if the king is in check
-	// 			if !b.CheckPlayerInCheck(2) {
-	// 				// Append the move
-	// 				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 2}})
-	// 			}
-	// 		}
-	// 	}
-
-	// }
+	//Castling
+	//FIXME: This will cause stack overflow for some reason
+	if b.CheckPlayerInCheck(p.Player) {
+		return moves
+	}
+	if p.Player == 1 {
+		if b.WhiteKingSideCastle {
+			// Check if there are pieces between the king and the rook
+			if b.GetPiece(0, 5).IsEmpty() && b.GetPiece(0, 6).IsEmpty() {
+				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 6}})
+			}
+		}
+		if b.WhiteQueenSideCastle {
+			// Check if there are pieces between the king and the rook
+			if b.GetPiece(0, 3).IsEmpty() && b.GetPiece(0, 2).IsEmpty() && b.GetPiece(0, 1).IsEmpty() {
+				moves = append(moves, Move{'M', 'K', true, p.Location, Location{0, 2}})
+			}
+		}
+	} else {
+		if b.BlackKingSideCastle {
+			// Check if there are pieces between the king and the rook
+			if b.GetPiece(7, 5).IsEmpty() && b.GetPiece(7, 6).IsEmpty() {
+				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 6}})
+			}
+		}
+		if b.BlackQueenSideCastle {
+			// Check if there are pieces between the king and the rook
+			if b.GetPiece(7, 3).IsEmpty() && b.GetPiece(7, 2).IsEmpty() && b.GetPiece(7, 1).IsEmpty() {
+				moves = append(moves, Move{'M', 'K', true, p.Location, Location{7, 2}})
+			}
+		}
+	}
 
 	return moves
 }

@@ -1,10 +1,11 @@
 package main
 
-import "fmt"
-
 type Game struct {
 	Board Board
 	State GameState
+
+	WhitePlayer PlayerController
+	BlackPlayer PlayerController
 }
 
 // GameState:
@@ -15,9 +16,11 @@ type Game struct {
 // 4 - draw
 type GameState int
 
-func (g *Game) Init() {
+func (g *Game) Init(whitePlayer PlayerController, blackPlayer PlayerController) {
 	g.Board.Init()
 	g.State = 0
+	g.WhitePlayer = whitePlayer
+	g.BlackPlayer = blackPlayer
 }
 
 func (g *Game) Print() {
@@ -34,14 +37,6 @@ func (g *Game) Play() {
 }
 
 func main() {
-	var board1 = InitFEN("4k2r/8/8/8/8/8/8/R3K2R w KQk - 2 4")
-	board1.PrintWithBorder()
-
-	whiteKing := board1.GetPieceAtLocation(Location{X: 0, Y: 4})
-	fmt.Println(whiteKing)
-	kingMoves := whiteKing.GetMoves(&board1)
-	for _, move := range kingMoves {
-		fmt.Println(move.ToString())
-	}
-
+	board := InitFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	board.PrintWithBorder()
 }

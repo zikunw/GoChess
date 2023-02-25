@@ -254,6 +254,21 @@ func (b *Board) GetPlayerMoves(player int) []Move {
 	return moves
 }
 
+// Get all moves from the given player except the king
+// since the king cannot attack another king
+// while this avoid to have an infinite loop for detecting moves
+// HACK: This is a hack, we should find a better way to do this.
+func (b *Board) GetPlayerMovesExceptKing(player int) []Move {
+	pieces := b.GetPlayerPieces(player)
+	moves := make([]Move, 0)
+	for _, piece := range pieces {
+		if piece.GetType() != 'K' {
+			moves = append(moves, piece.GetMoves(b)...)
+		}
+	}
+	return moves
+}
+
 // Get all the legal moves for the given player.
 // This function uses GetPlayerMoves() and filters out moves that put the player in check.
 func (b *Board) GetPlayerLegalMoves(player int) []Move {
@@ -288,7 +303,7 @@ func (b *Board) CheckPlayerInCheck(player int) bool {
 		}
 	}
 	// Check if any of the opponent's pieces can move to the king's location.
-	opponentMoves := b.GetPlayerMoves(3 - player)
+	opponentMoves := b.GetPlayerMovesExceptKing(3 - player)
 	for _, move := range opponentMoves {
 		if move.To == kingLoc {
 			return true
