@@ -1,6 +1,6 @@
 # GoChess
 
-GoChess is currently a side project of mine. My goal is to make it a server that provides a standard API for different software/players to join.
+GoChess is currently work-in-progress.
 
 ## Usage
 
