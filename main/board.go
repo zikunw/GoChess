@@ -45,6 +45,22 @@ type Location struct {
 	Y int
 }
 
+// Get the chebychev distance between two locations
+func (l *Location) Distance(l2 Location) int {
+	x := l.X - l2.X
+	y := l.Y - l2.Y
+	if x < 0 {
+		x = -x
+	}
+	if y < 0 {
+		y = -y
+	}
+	if x > y {
+		return x
+	}
+	return y
+}
+
 func (b *Board) Init() {
 	b.Height = 8
 	b.Width = 8
@@ -55,6 +71,9 @@ func (b *Board) Init() {
 	b.WhiteQueenSideCastle = true
 	b.BlackKingSideCastle = true
 	b.BlackQueenSideCastle = true
+
+	b.HalfmoveClock = 0
+	b.FullmoveNumber = 1
 
 	// Init with empty move
 	b.LastMove = Move{
@@ -281,10 +300,23 @@ func (b *Board) GetPlayerMovesExceptKing(player int) []Move {
 func (b *Board) GetPlayerLegalMoves(player int) []Move {
 	moves := b.GetPlayerMoves(player)
 	legalMoves := make([]Move, 0)
+
+	// get the enemy king location
+	// Since we do not calculate the king moves for CheckPlayerInCheck()
+	// we need to get the enemy king location to check if the move is
+	enemyKingLoc := Location{}
+	for i := 0; i < b.Height; i++ {
+		for j := 0; j < b.Width; j++ {
+			if b.Locations[i][j].GetType() == 'K' && b.Locations[i][j].GetPlayer() != player {
+				enemyKingLoc = Location{i, j}
+			}
+		}
+	}
+
 	for _, move := range moves {
 		newBoard := b.Copy()
 		newBoard.MakeMove(move)
-		if !newBoard.CheckPlayerInCheck(player) {
+		if !newBoard.CheckPlayerInCheck(player) && move.To.Distance(enemyKingLoc) > 1 {
 			legalMoves = append(legalMoves, move)
 		}
 	}
@@ -328,6 +360,18 @@ func (b *Board) MakeMove(m Move) {
 
 	// Update the board state
 	b.LastMove = m
+
+	// Update half move clock
+	if m.Piece == 'P' || m.Type == 'C' {
+		b.HalfmoveClock = 0
+	} else {
+		b.HalfmoveClock++
+	}
+
+	// Update full move number
+	if player == 2 {
+		b.FullmoveNumber++
+	}
 
 	// Update the castling rights
 	if m.Piece == 'K' {

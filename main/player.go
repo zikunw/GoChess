@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 )
 
@@ -34,9 +35,13 @@ func (p *HumanPlayer) GetMove(b *Board) Move {
 	// Prompt user for which piece to move
 	// If the piece is not owned by the player, prompt again
 	for {
-		fmt.Print("Which piece do you want to move? (e.g. a2): ")
+		fmt.Print("Which piece do you want to move? (e.g. a1): ")
 		text, _ := reader.ReadString('\n')
 		if len(text) < 2 {
+			fmt.Print("Invalid piece. ")
+			continue
+		}
+		if text[0] < 'a' || text[0] > 'h' || text[1] < '1' || text[1] > '8' {
 			fmt.Print("Invalid piece. ")
 			continue
 		}
@@ -53,9 +58,13 @@ func (p *HumanPlayer) GetMove(b *Board) Move {
 	// Prompt user for where to move the piece
 	// If the move is not legal, prompt again
 	for {
-		fmt.Print("Where do you want to move the piece? (e.g. a3): ")
+		fmt.Print("Where do you want to move the piece? (e.g. a1): ")
 		text, _ := reader.ReadString('\n')
 		if len(text) < 2 {
+			fmt.Print("Invalid piece. ")
+			continue
+		}
+		if text[0] < 'a' || text[0] > 'h' || text[1] < '1' || text[1] > '8' {
 			fmt.Print("Invalid piece. ")
 			continue
 		}
@@ -70,5 +79,17 @@ func (p *HumanPlayer) GetMove(b *Board) Move {
 		fmt.Print("Invalid move. ")
 	}
 
+	return move
+}
+
+type RandomComputerPlayer struct {
+	Color int // 1 - white, 2 - black
+}
+
+// This player will randomly pick a legal move from the list
+func (p *RandomComputerPlayer) GetMove(b *Board) Move {
+	moves := b.GetPlayerLegalMoves(p.Color)
+	// Choose a random move from the list
+	move := moves[rand.Intn(len(moves))]
 	return move
 }
