@@ -25,6 +25,15 @@ func (g *Game) Init(whitePlayer PlayerController, blackPlayer PlayerController) 
 	g.BlackPlayer = blackPlayer
 }
 
+// Init the game with a FEN string
+// For debugging purposes
+func (g *Game) InitWithFEN(fen string, whitePlayer PlayerController, blackPlayer PlayerController) {
+	g.Board = InitFEN(fen)
+	g.State = 0
+	g.WhitePlayer = whitePlayer
+	g.BlackPlayer = blackPlayer
+}
+
 func (g *Game) Print() {
 	g.Board.PrintWithBorder()
 }
