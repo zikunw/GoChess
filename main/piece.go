@@ -24,7 +24,7 @@ func (p PlayerPiece) GetValue() int {
 	case 'Q':
 		return 9
 	case 'K':
-		return 0
+		return 100
 	}
 	return 0
 }
@@ -632,7 +632,6 @@ func LocationToGrid(l Location) string {
 }
 
 // grid location to x,y
-// TODO: check if this is correct
 func GridToLocation(grid string) Location {
 	//return int(grid[0] - 'a'), int(grid[1] - '1')
 	return Location{int(grid[1] - '1'), int(grid[0] - 'a')}

@@ -436,7 +436,6 @@ func (b *Board) MakeMove(m Move) {
 }
 
 // Check if the given player is in checkmate.
-// TODO: Test this function
 func (b *Board) CheckPlayerInCheckmate(player int) bool {
 	if !b.CheckPlayerInCheck(player) {
 		return false
@@ -449,13 +448,36 @@ func (b *Board) CheckPlayerInCheckmate(player int) bool {
 }
 
 // Check if the given player is in stalemate.
-// TODO: Test this function
 func (b *Board) CheckPlayerInStalemate(player int) bool {
 	if b.CheckPlayerInCheck(player) {
 		return false
 	}
 	legalMoves := b.GetPlayerLegalMoves(player)
 	if len(legalMoves) == 0 {
+		return true
+	}
+	return false
+}
+
+// Get the piece value for a player
+func (b *Board) GetPieceValue(player int) int {
+	value := 0
+	for i := 0; i < b.Height; i++ {
+		for j := 0; j < b.Width; j++ {
+			if b.Locations[i][j].GetPlayer() == player {
+				value += b.Locations[i][j].GetValue()
+			}
+		}
+	}
+	return value
+}
+
+// Check if a board is in terminal state.
+func (b *Board) IsTerminal() bool {
+	if b.CheckPlayerInCheckmate(1) || b.CheckPlayerInCheckmate(2) || b.CheckPlayerInStalemate(1) || b.CheckPlayerInStalemate(2) {
+		return true
+	}
+	if b.HalfmoveClock >= 100 {
 		return true
 	}
 	return false

@@ -93,3 +93,96 @@ func (p *RandomComputerPlayer) GetMove(b *Board) Move {
 	move := moves[rand.Intn(len(moves))]
 	return move
 }
+
+type MinimaxComputerPlayer struct {
+	Color int // 1 - white, 2 - black
+	Depth int
+}
+
+// This player will use the minimax algorithm to find the best move
+func (p *MinimaxComputerPlayer) GetMove(b *Board) Move {
+	var maximizingPlayer bool
+	if p.Color == 1 {
+		maximizingPlayer = true
+	} else {
+		maximizingPlayer = false
+	}
+	_, move := MinMaxAlg(b, p.Depth, maximizingPlayer)
+	return move
+}
+
+func Max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func Min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func MinMaxHeuristic(b *Board, playerColor int) int {
+	// if white is checkmated, return a very small number
+	if b.CheckPlayerInCheckmate(1) {
+		return -10000
+	}
+	// if black is checkmate, return a very large number
+	if b.CheckPlayerInCheckmate(2) {
+		return 10000
+	}
+	return b.GetPieceValue(1) - b.GetPieceValue(2)
+}
+
+// MinMax algorithm (No alpha-beta pruning, so pretty slow)
+// Input parameters:
+// - b: the board
+// - depth: the depth of the search tree
+// - maximizingPlayer: true if the current player is the maximizing player
+// - playerColor: the color of the current player
+// Output:
+// - the best move & heuristic value
+func MinMaxAlg(b *Board, depth int, maximizingPlayer bool) (int, Move) {
+	var playerColor int
+	if maximizingPlayer {
+		playerColor = 1
+	} else {
+		playerColor = 2
+	}
+
+	if depth == 0 || b.IsTerminal() {
+		return MinMaxHeuristic(b, playerColor), Move{}
+	}
+
+	var bestMove Move
+	if maximizingPlayer {
+		value := -100000
+		moves := b.GetPlayerLegalMoves(playerColor)
+		for _, move := range moves {
+			newBoard := b.Copy()
+			newBoard.MakeMove(move)
+			newValue, _ := MinMaxAlg(&newBoard, depth-1, false)
+			value = Max(value, newValue)
+			if value == newValue {
+				bestMove = move
+			}
+		}
+		return value, bestMove
+	} else {
+		value := 100000
+		moves := b.GetPlayerLegalMoves(playerColor)
+		for _, move := range moves {
+			newBoard := b.Copy()
+			newBoard.MakeMove(move)
+			newValue, _ := MinMaxAlg(&newBoard, depth-1, true)
+			value = Min(value, newValue)
+			if value == newValue {
+				bestMove = move
+			}
+		}
+		return value, bestMove
+	}
+}
