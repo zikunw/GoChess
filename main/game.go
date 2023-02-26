@@ -29,6 +29,7 @@ func (g *Game) Print() {
 	g.Board.PrintWithBorder()
 }
 
+// Initiate the game logic
 func (g *Game) Play() {
 	// If the game is over, do nothing.
 	if g.State == 2 || g.State == 3 || g.State == 4 {
@@ -45,4 +46,7 @@ func (g *Game) Play() {
 		g.Board.MakeMove(move)
 		g.State = 0
 	}
+
+	// Check if the game is over
+	// TODO: Currently the game wont stop
 }

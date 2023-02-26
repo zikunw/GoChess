@@ -363,7 +363,7 @@ func (b *Board) MakeMove(m Move) {
 		b.Locations[m.From.X][m.From.Y] = EmptyPiece{}
 		b.Locations[m.From.X][0] = EmptyPiece{}
 		b.Locations[m.To.X][m.To.Y] = PlayerPiece{player, 'K', m.To}
-		b.Locations[m.To.X][m.To.Y-1] = PlayerPiece{player, 'R', Location{m.To.X, m.To.Y - 1}}
+		b.Locations[m.To.X][m.To.Y+1] = PlayerPiece{player, 'R', Location{m.To.X, m.To.Y + 1}}
 		return
 	}
 	if m.Type == 'K' && m.From.Y-m.To.Y == -2 {
@@ -371,7 +371,7 @@ func (b *Board) MakeMove(m Move) {
 		b.Locations[m.From.X][m.From.Y] = EmptyPiece{}
 		b.Locations[m.From.X][7] = EmptyPiece{}
 		b.Locations[m.To.X][m.To.Y] = PlayerPiece{player, 'K', m.To}
-		b.Locations[m.To.X][m.To.Y+1] = PlayerPiece{player, 'R', Location{m.To.X, m.To.Y + 1}}
+		b.Locations[m.To.X][m.To.Y-1] = PlayerPiece{player, 'R', Location{m.To.X, m.To.Y - 1}}
 		return
 	}
 
