@@ -159,8 +159,9 @@ func MinMaxAlg(b *Board, depth int, maximizingPlayer bool) (int, Move) {
 
 	var bestMove Move
 	if maximizingPlayer {
-		value := -100000
+		value := -10000000
 		moves := b.GetPlayerLegalMoves(playerColor)
+		moves = ShuffleMoves(moves) // To make it more fun
 		for _, move := range moves {
 			newBoard := b.Copy()
 			newBoard.MakeMove(move)
@@ -172,8 +173,9 @@ func MinMaxAlg(b *Board, depth int, maximizingPlayer bool) (int, Move) {
 		}
 		return value, bestMove
 	} else {
-		value := 100000
+		value := 10000000
 		moves := b.GetPlayerLegalMoves(playerColor)
+		moves = ShuffleMoves(moves) // To make it more fun
 		for _, move := range moves {
 			newBoard := b.Copy()
 			newBoard.MakeMove(move)

@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
 
 type PlayerPiece struct {
 	Player   int  // 1 - white player, 2 - black player
@@ -648,4 +652,11 @@ func (m Move) IsCheck(b *Board) bool {
 	// return newBoard.IsInCheck(b.Turn)
 
 	return false
+}
+
+// Shuffle a slice of moves
+func ShuffleMoves(moves []Move) []Move {
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(moves), func(i, j int) { moves[i], moves[j] = moves[j], moves[i] })
+	return moves
 }

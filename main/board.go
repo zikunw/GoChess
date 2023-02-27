@@ -207,20 +207,22 @@ func (b *Board) Print() {
 
 // Print the board with border.
 func (b *Board) PrintWithBorder() {
-	fmt.Print("  ")
+	fmt.Print("   ")
 	for i := 0; i < b.Width; i++ {
 		fmt.Printf("%c ", 'a'+i)
 	}
 	fmt.Println()
+	fmt.Println(" ┌─────────────────┐")
 	for i := b.Height - 1; i >= 0; i-- {
-		fmt.Printf("%d ", i+1)
+		fmt.Printf("%d│ ", i+1)
 		for j := 0; j < b.Width; j++ {
 			fmt.Printf("%c ", b.Locations[i][j].GetChar())
 		}
-		fmt.Printf("%d", i+1)
+		fmt.Printf("│%d", i+1)
 		fmt.Println()
 	}
-	fmt.Print("  ")
+	fmt.Println(" └─────────────────┘")
+	fmt.Print("   ")
 	for i := 0; i < b.Width; i++ {
 		fmt.Printf("%c ", 'a'+i)
 	}
