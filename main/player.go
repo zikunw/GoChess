@@ -23,7 +23,6 @@ type HumanPlayer struct {
 }
 
 // Prompts the user to move a piece.
-// TODO: Check if this function work
 func (p *HumanPlayer) GetMove(b *Board) Move {
 
 	reader := bufio.NewReader(os.Stdin)
@@ -107,7 +106,7 @@ func (p *MinimaxComputerPlayer) GetMove(b *Board) Move {
 	} else {
 		maximizingPlayer = false
 	}
-	_, move := MinMaxAlg(b, p.Depth, maximizingPlayer)
+	_, move := AlphaBetaAlg(b, p.Depth, maximizingPlayer, -100000, 100000)
 	return move
 }
 
@@ -180,6 +179,59 @@ func MinMaxAlg(b *Board, depth int, maximizingPlayer bool) (int, Move) {
 			newBoard := b.Copy()
 			newBoard.MakeMove(move)
 			newValue, _ := MinMaxAlg(&newBoard, depth-1, true)
+			value = Min(value, newValue)
+			if value == newValue {
+				bestMove = move
+			}
+		}
+		return value, bestMove
+	}
+}
+
+// Same as MinMax Alg but with alpha-beta pruning
+func AlphaBetaAlg(b *Board, depth int, maximizingPlayer bool, alpha int, beta int) (int, Move) {
+	var playerColor int
+	if maximizingPlayer {
+		playerColor = 1
+	} else {
+		playerColor = 2
+	}
+
+	if depth == 0 || b.IsTerminal() {
+		return MinMaxHeuristic(b, playerColor), Move{}
+	}
+
+	var bestMove Move
+	if maximizingPlayer {
+		value := -10000000
+		moves := b.GetPlayerLegalMoves(playerColor)
+		moves = ShuffleMoves(moves) // To make it more fun
+		for _, move := range moves {
+			newBoard := b.Copy()
+			newBoard.MakeMove(move)
+			newValue, _ := AlphaBetaAlg(&newBoard, depth-1, false, alpha, beta)
+			if newValue > beta {
+				return newValue, move
+			}
+			value = Max(value, newValue)
+			alpha = Max(alpha, value)
+			if value == newValue {
+				bestMove = move
+			}
+		}
+		return value, bestMove
+	} else {
+		value := 10000000
+		moves := b.GetPlayerLegalMoves(playerColor)
+		moves = ShuffleMoves(moves) // To make it more fun
+		for _, move := range moves {
+			newBoard := b.Copy()
+			newBoard.MakeMove(move)
+			newValue, _ := AlphaBetaAlg(&newBoard, depth-1, true, alpha, beta)
+			if newValue < alpha {
+				return newValue, move
+			}
+			beta = Min(beta, value)
 			value = Min(value, newValue)
 			if value == newValue {
 				bestMove = move

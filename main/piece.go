@@ -642,7 +642,7 @@ func GridToLocation(grid string) Location {
 }
 
 // Check if a given move is check.
-// TODO
+// TODO:
 func (m Move) IsCheck(b *Board) bool {
 	// // Make a copy of the board.
 	// newBoard := b.Copy()
