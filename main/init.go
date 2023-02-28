@@ -5,20 +5,9 @@ import (
 )
 
 func main() {
-	// game := Game{}
-	// game.Init(&HumanPlayer{1}, &HumanPlayer{2})
-	// for {
-	// 	fmt.Println("")
-	// 	game.Print()
-	// 	game.Play()
-	// }
 
-	// Play a game with random player
 	game := Game{}
-	//game.Init(&RandomComputerPlayer{1}, &MinimaxComputerPlayer{2, 3})
 	game.Init(&MinimaxComputerPlayer{1, 4}, &MinimaxComputerPlayer{2, 3})
-	//game.Init(&MinimaxComputerPlayer{1, 3}, &RandomComputerPlayer{2})
-	//game.Init(&MinimaxComputerPlayer{1, 3}, &HumanPlayer{2})
 
 	game.Print()
 	for {
@@ -29,7 +18,6 @@ func main() {
 		if isEnd {
 			break
 		}
-		//time.Sleep(time.Millisecond * 500)
 	}
 	game.Print()
 
