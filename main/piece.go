@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -540,6 +541,11 @@ func (p PlayerPiece) String() string {
 	return fmt.Sprintf("[Player Piece] Player: %d, Type: %c, X: %d, Y: %d", p.Player, p.Type, p.Location.X, p.Location.Y)
 }
 
+// TODO: TEST
+func (p PlayerPiece) Serialize() string {
+	return fmt.Sprintf("%d%c%d%d", p.Player, p.Type, p.Location.X, p.Location.Y)
+}
+
 type EmptyPiece struct {
 }
 
@@ -550,6 +556,7 @@ func (p EmptyPiece) GetValue() int            { return 0 }
 func (p EmptyPiece) GetMoves(b *Board) []Move { return []Move{} }
 func (p EmptyPiece) GetChar() rune            { return ' ' }
 func (p EmptyPiece) String() string           { return "[Empty Piece]" }
+func (p EmptyPiece) Serialize() string        { return "E" }
 
 type Piece interface {
 	// Check if empty.
@@ -566,6 +573,8 @@ type Piece interface {
 	GetChar() rune
 	// to string
 	String() string
+	// serialize
+	Serialize() string
 }
 
 type Move struct {
@@ -659,4 +668,16 @@ func ShuffleMoves(moves []Move) []Move {
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(moves), func(i, j int) { moves[i], moves[j] = moves[j], moves[i] })
 	return moves
+}
+
+// TODO: TEST
+func DeserializePiece(s string) Piece {
+	if s == "E" {
+		return EmptyPiece{}
+	}
+	player, _ := strconv.Atoi(string(s[0]))
+	pieceType := rune(s[1])
+	x, _ := strconv.Atoi(string(s[2]))
+	y, _ := strconv.Atoi(string(s[3]))
+	return PlayerPiece{player, pieceType, Location{x, y}}
 }

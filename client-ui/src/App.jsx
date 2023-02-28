@@ -70,11 +70,22 @@ class Board {
     }
   }
 
+  movePiece(from, to) {
+    this.squares[to].piece = this.squares[from].piece
+    this.squares[from].piece = ""
+  }
 }
 
 function App() {
 
   const [board, setBoard] = useState(new Board())
+  const [selectedSquare, setSelectedSquare] = useState(-1)
+
+  const handlePieceMove = (from, to) => {
+    board.movePiece(from, to)
+    setBoard(board)
+    setSelectedSquare(-1)
+  }
 
   return (
     <main className='w-auto h-screen bg-stone-700'>
@@ -82,9 +93,14 @@ function App() {
 
         <div className="border-2 w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
           {board.squares.map((square, index) => (
-            <div key={index} className={`aspect-square ${square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
-              {square.piece && <PieceDisplay piece={square.piece} />}
-            </div>
+            <SquareDisplay 
+              key={index} 
+              index={index} 
+              square={square} 
+              selectedSquare={selectedSquare} 
+              setSelectedSquare={setSelectedSquare}
+              handlePieceMove={handlePieceMove}
+              />
           ))}
         </div>
       </div>
@@ -92,9 +108,36 @@ function App() {
   )
 }
 
+function SquareDisplay ({index, square, selectedSquare, setSelectedSquare, handlePieceMove}) {
+
+  const handleOnClick = () => {
+    if (selectedSquare === index) {
+      setSelectedSquare(-1)
+      return
+    }
+
+    if (selectedSquare !== -1) {
+      handlePieceMove(selectedSquare, index)
+      console.log("move piece")
+      return
+    }
+
+    if (square.piece){
+      setSelectedSquare(index)
+    }
+    
+  }
+
+  return (
+    <div onClick={handleOnClick} className={`aspect-square ${index===selectedSquare? "bg-red-400" :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
+      {square.piece && <PieceDisplay piece={square.piece} />}
+    </div>
+  )
+}
+
 function PieceDisplay ({piece}) {
   return (
-    <div className="aspect-square">
+    <div className="aspect-square duration-200 hover:scale-110">
       <img src={
         piece.type === 'P' ? whitePawn :
         piece.type === 'R' ? whiteRook :
