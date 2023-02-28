@@ -58,6 +58,11 @@ Run the following command in `main()` will pitch two minmax AI against each othe
 	game.Print()
 ```
 
+Output:
+![vid](https://user-images.githubusercontent.com/68682076/221472289-8e43d2d1-a3dc-4316-b5f1-7a4945ff053e.mov)
+
+
+
 ## My current progress
 - [x] basic game logic (check detection, legal moves etc)
 - [x] overall game logic (starting a game, turns, etc)
