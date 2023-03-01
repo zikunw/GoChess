@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // piece png
 import blackPawn from './assets/black_pawn.png'
@@ -13,6 +13,16 @@ import whiteKnight from './assets/white_knight.png'
 import whiteBishop from './assets/white_bishop.png'
 import whiteQueen from './assets/white_queen.png'
 import whiteKing from './assets/white_king.png'
+
+// Square direction constants
+const UP = -8
+const DOWN = 8
+const LEFT = -1
+const RIGHT = 1
+const UP_LEFT = UP + LEFT
+const UP_RIGHT = UP + RIGHT
+const DOWN_LEFT = DOWN + LEFT
+const DOWN_RIGHT = DOWN + RIGHT
 
 // information about a board square
 class Square {
@@ -74,12 +84,70 @@ class Board {
     this.squares[to].piece = this.squares[from].piece
     this.squares[from].piece = ""
   }
+
+  pieceLegalMoves(piece, square) {
+    console.log(piece, square)
+    let moves = []
+
+    if (piece.type === 'P') { // white pawn
+      // move forward
+      if (square > 8 && this.squares[square + UP].piece === "") {
+        moves.push(square + UP)
+      }
+      // move forward 2
+      if (square <= 55 && square >= 48 && this.squares[square + UP].piece === "" && this.squares[square + UP + UP].piece === "") {
+        console.log("Move forward 2")
+        moves.push(square + UP + UP)
+      }
+      // capture left
+      if (square > 8 && square % 8 !== 0 && this.squares[square + UP_LEFT].piece !== "" && this.squares[square + UP_LEFT].piece.color !== piece.color) {
+        moves.push(square + UP_LEFT)
+      }
+      // capture right
+      if (square > 8 && square % 8 !== 7 && this.squares[square + UP_RIGHT].piece !== "" && this.squares[square + UP_RIGHT].piece.color !== piece.color) {
+        console.log("capture right")
+        moves.push(square + UP_RIGHT)
+      }
+      // en passant left TODO: check if last move was a double pawn move
+      // en passant right
+
+      // promotion TODO: deal with this later
+    }
+
+    if (piece.type === 'p') { // black pawn
+      // move forward
+      if (square < 55 && this.squares[square + DOWN].piece === "") {
+        moves.push(square + DOWN)
+      }
+      // move forward 2
+      if (square <= 15 && square >= 8 && this.squares[square + DOWN].piece === "" && this.squares[square + DOWN + DOWN].piece === "") {
+        moves.push(square + DOWN + DOWN)
+      }
+      // capture left
+      if (square < 55 && square % 8 !== 0 && this.squares[square + DOWN_LEFT].piece !== "" && this.squares[square + DOWN_LEFT].piece.color !== piece.color) {
+        moves.push(square + DOWN_LEFT)
+      }
+      // capture right
+      if (square < 55 && square % 8 !== 7 && this.squares[square + DOWN_RIGHT].piece !== "" && this.squares[square + DOWN_RIGHT].piece.color !== piece.color) {
+        moves.push(square + DOWN_RIGHT)
+      }
+      // en passant left TODO: check if last move was a double pawn move
+      // en passant right
+
+      // promotion TODO: deal with this later
+    }
+    return moves
+  }
 }
 
 function App() {
 
   const [board, setBoard] = useState(new Board())
   const [selectedSquare, setSelectedSquare] = useState(-1)
+
+  const [legalMoves, setLegalMoves] = useState([])
+
+  //const [player, setPlayer] = useState('white')
 
   const handlePieceMove = (from, to) => {
     board.movePiece(from, to)
@@ -88,48 +156,67 @@ function App() {
   }
 
   return (
-    <main className='w-auto h-screen bg-stone-700'>
+    <main className='w-auto h-screen bg-stone-800'>
       <div className='flex flex-col items-center justify-center h-full '>
 
-        <div className="border-2 w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
-          {board.squares.map((square, index) => (
+        <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
+          {
+            board.squares.map((square, index) => (
             <SquareDisplay 
               key={index} 
               index={index} 
-              square={square} 
+              square={square}
+              board={board}
               selectedSquare={selectedSquare} 
+              legalMoves={legalMoves}
               setSelectedSquare={setSelectedSquare}
               handlePieceMove={handlePieceMove}
-              />
-          ))}
+              setLegalMoves={setLegalMoves}
+              /> ))
+          }
         </div>
+
       </div>
     </main>
   )
 }
 
-function SquareDisplay ({index, square, selectedSquare, setSelectedSquare, handlePieceMove}) {
+function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves}) {
 
   const handleOnClick = () => {
+    console.log("clicked", index)
+    setLegalMoves([])
+
     if (selectedSquare === index) {
       setSelectedSquare(-1)
       return
     }
 
     if (selectedSquare !== -1) {
-      handlePieceMove(selectedSquare, index)
-      console.log("move piece")
+      // TODO: handle request from the server
+      // check if legal move
+      if (legalMoves.includes(index)){
+        handlePieceMove(selectedSquare, index)
+      } else {
+        setSelectedSquare(-1)
+      }
+      
       return
     }
-
+    
+    // if there is a piece on the square
+    // set legal moves
     if (square.piece){
+      setLegalMoves(board.pieceLegalMoves(square.piece, index))
       setSelectedSquare(index)
     }
     
   }
 
   return (
-    <div onClick={handleOnClick} className={`aspect-square ${index===selectedSquare? "bg-red-400" :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
+    <div 
+      onClick={handleOnClick} 
+      className={`aspect-square ${(index===selectedSquare || legalMoves.includes(index))? "bg-red-400" :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
       {square.piece && <PieceDisplay piece={square.piece} />}
     </div>
   )
@@ -150,7 +237,16 @@ function PieceDisplay ({piece}) {
         piece.type === 'n' ? blackKnight :
         piece.type === 'b' ? blackBishop :
         piece.type === 'q' ? blackQueen :
-        piece.type === 'k' ? blackKing : null} />
+        piece.type === 'k' ? blackKing : null} 
+        style={{
+          MozWindowDragging: 'none',
+          WebkitAppRegion: 'no-drag',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserDrag: 'none',
+
+        }}
+        />
         
     </div>
   )
