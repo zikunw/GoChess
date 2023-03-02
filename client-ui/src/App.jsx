@@ -85,6 +85,8 @@ class Board {
     this.squares[from].piece = ""
   }
 
+  // Ideally I dont want to use this function
+  // Instead TODO: request server for legal moves
   pieceLegalMoves(piece, square) {
     console.log(piece, square)
     let moves = []
@@ -216,8 +218,8 @@ function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSel
   return (
     <div 
       onClick={handleOnClick} 
-      className={`aspect-square ${(index===selectedSquare || legalMoves.includes(index))? "bg-red-400" :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
-      {square.piece && <PieceDisplay piece={square.piece} />}
+      className={`aspect-square static ${(index===selectedSquare || (legalMoves.includes(index)) && <div className="aspect-square bg-green-500 opacity-50 static"></div>) ? 'bg-red-400' :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
+        {square.piece && <PieceDisplay piece={square.piece} />}
     </div>
   )
 }

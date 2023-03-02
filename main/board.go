@@ -494,29 +494,32 @@ func (b *Board) Serialize() string {
 			serialized += b.Locations[i][j].Serialize()
 		}
 	}
-	serialized += fmt.Sprintf("%d", b.HalfmoveClock)
-	serialized += fmt.Sprintf("%d", b.FullmoveNumber)
-	serialized += fmt.Sprintf("%t", b.WhiteQueenSideCastle)
-	serialized += fmt.Sprintf("%t", b.WhiteKingSideCastle)
-	serialized += fmt.Sprintf("%t", b.BlackQueenSideCastle)
-	serialized += fmt.Sprintf("%t", b.BlackKingSideCastle)
+	serialized += fmt.Sprintf(" %d", b.HalfmoveClock)
+	serialized += fmt.Sprintf(" %d", b.FullmoveNumber)
+	serialized += fmt.Sprintf(" %t", b.WhiteQueenSideCastle)
+	serialized += fmt.Sprintf(" %t", b.WhiteKingSideCastle)
+	serialized += fmt.Sprintf(" %t", b.BlackQueenSideCastle)
+	serialized += fmt.Sprintf(" %t", b.BlackKingSideCastle)
 	return serialized
 }
 
 // Deserialize the board from a string.
 // TODO: FIX
 func (b *Board) Deserialize(serialized string) {
-	for i := 0; i < 8; i++ {
-		for j := 0; j < 8; j++ {
-			fmt.Println(serialized[i*b.Width+j : i*b.Width+j+1])
-			b.Locations[i][j] = DeserializePiece(serialized[i*b.Width+j : i*b.Width+j+2])
+	boardInfo := strings.Split(serialized, " ")
 
+	piecePosition := boardInfo[0]
+	for i := 0; i < b.Height; i++ {
+		for j := 0; j < b.Width; j++ {
+			b.Locations[i][j] = DeserializePiece(string(piecePosition[i*b.Width+j]))
+			b.Locations[i][j].SetLocation(Location{i, j})
 		}
 	}
-	b.HalfmoveClock, _ = strconv.Atoi(serialized[64:65])
-	b.FullmoveNumber, _ = strconv.Atoi(serialized[65:66])
-	b.WhiteQueenSideCastle, _ = strconv.ParseBool(serialized[66:67])
-	b.WhiteKingSideCastle, _ = strconv.ParseBool(serialized[67:68])
-	b.BlackQueenSideCastle, _ = strconv.ParseBool(serialized[68:69])
-	b.BlackKingSideCastle, _ = strconv.ParseBool(serialized[69:70])
+
+	b.HalfmoveClock, _ = strconv.Atoi(boardInfo[1])
+	b.FullmoveNumber, _ = strconv.Atoi(boardInfo[2])
+	b.WhiteQueenSideCastle, _ = strconv.ParseBool(boardInfo[3])
+	b.WhiteKingSideCastle, _ = strconv.ParseBool(boardInfo[4])
+	b.BlackQueenSideCastle, _ = strconv.ParseBool(boardInfo[5])
+	b.BlackKingSideCastle, _ = strconv.ParseBool(boardInfo[6])
 }

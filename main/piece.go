@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"time"
 )
 
@@ -543,7 +542,15 @@ func (p PlayerPiece) String() string {
 
 // TODO: TEST
 func (p PlayerPiece) Serialize() string {
-	return fmt.Sprintf("%d%c%d%d", p.Player, p.Type, p.Location.X, p.Location.Y)
+	if p.Player == 1 {
+		return fmt.Sprintf("%c", p.Type)
+	} else {
+		return fmt.Sprintf("%c", p.Type+32)
+	}
+}
+
+func (p PlayerPiece) SetLocation(l Location) {
+	p.Location = l
 }
 
 type EmptyPiece struct {
@@ -557,6 +564,7 @@ func (p EmptyPiece) GetMoves(b *Board) []Move { return []Move{} }
 func (p EmptyPiece) GetChar() rune            { return ' ' }
 func (p EmptyPiece) String() string           { return "[Empty Piece]" }
 func (p EmptyPiece) Serialize() string        { return "E" }
+func (p EmptyPiece) SetLocation(Location)     {}
 
 type Piece interface {
 	// Check if empty.
@@ -569,6 +577,8 @@ type Piece interface {
 	GetValue() int
 	// Returns the possible moves for this piece.
 	GetMoves(*Board) []Move
+	// Set the location of this piece.
+	SetLocation(Location)
 	// Return unicode character for this piece.
 	GetChar() rune
 	// to string
@@ -675,9 +685,13 @@ func DeserializePiece(s string) Piece {
 	if s == "E" {
 		return EmptyPiece{}
 	}
-	player, _ := strconv.Atoi(string(s[0]))
-	pieceType := rune(s[1])
-	x, _ := strconv.Atoi(string(s[2]))
-	y, _ := strconv.Atoi(string(s[3]))
-	return PlayerPiece{player, pieceType, Location{x, y}}
+	player := 1
+	pieceType := rune(s[0])
+	if s[0] >= 'a' && s[0] <= 'z' {
+		player = 2
+		pieceType = rune(s[0] - 32)
+	}
+
+	// The location needs to be modified later on.
+	return PlayerPiece{player, pieceType, Location{0, 0}}
 }
