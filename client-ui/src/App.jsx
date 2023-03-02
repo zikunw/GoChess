@@ -24,6 +24,26 @@ const UP_RIGHT = UP + RIGHT
 const DOWN_LEFT = DOWN + LEFT
 const DOWN_RIGHT = DOWN + RIGHT
 
+// Post function
+// From: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+async function postData(url = "", data = {}) {
+  // Default options are marked with *
+  const response = await fetch(url, {
+    method: "POST", // *GET, POST, PUT, DELETE, etc.
+    mode: "cors", // no-cors, *cors, same-origin
+    cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+    credentials: "same-origin", // include, *same-origin, omit
+    headers: {
+      "Content-Type": "application/json",
+      // 'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    redirect: "follow", // manual, *follow, error
+    referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+    body: JSON.stringify(data), // body data type must match "Content-Type" header
+  });
+  return response.json(); // parses JSON response into native JavaScript objects
+}
+
 // information about a board square
 class Square {
   constructor(color, piece) {
@@ -45,10 +65,20 @@ class Board {
 
   constructor() {
     this.squares = []
+    // Keep track of whose turn is it
+	  // 1 - white player's turn
+	  // 2 - black player's turn
+	  // 3 - white player won
+	  // 4 - black player won
+	  // 5 - draw
+    this.state = 1
     this.readFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')
   }
 
   readFEN(fen) {
+    // Clear the squares
+    this.squares = []
+
     let pieceLocation = fen.split(' ')[0]
     let rows = pieceLocation.split('/')
     let squareCount = 0
@@ -80,6 +110,12 @@ class Board {
     }
   }
 
+  readBoardState(boardState) {
+    const data = boardState.split(' ')
+    this.readFEN(data[0])
+    this.state = parseInt(data[1])
+  }
+
   movePiece(from, to) {
     this.squares[to].piece = this.squares[from].piece
     this.squares[from].piece = ""
@@ -87,59 +123,102 @@ class Board {
 
   // Ideally I dont want to use this function
   // Instead TODO: request server for legal moves
-  pieceLegalMoves(piece, square) {
-    console.log(piece, square)
-    let moves = []
-
-    if (piece.type === 'P') { // white pawn
-      // move forward
-      if (square > 8 && this.squares[square + UP].piece === "") {
-        moves.push(square + UP)
-      }
-      // move forward 2
-      if (square <= 55 && square >= 48 && this.squares[square + UP].piece === "" && this.squares[square + UP + UP].piece === "") {
-        console.log("Move forward 2")
-        moves.push(square + UP + UP)
-      }
-      // capture left
-      if (square > 8 && square % 8 !== 0 && this.squares[square + UP_LEFT].piece !== "" && this.squares[square + UP_LEFT].piece.color !== piece.color) {
-        moves.push(square + UP_LEFT)
-      }
-      // capture right
-      if (square > 8 && square % 8 !== 7 && this.squares[square + UP_RIGHT].piece !== "" && this.squares[square + UP_RIGHT].piece.color !== piece.color) {
-        console.log("capture right")
-        moves.push(square + UP_RIGHT)
-      }
-      // en passant left TODO: check if last move was a double pawn move
-      // en passant right
-
-      // promotion TODO: deal with this later
-    }
-
-    if (piece.type === 'p') { // black pawn
-      // move forward
-      if (square < 55 && this.squares[square + DOWN].piece === "") {
-        moves.push(square + DOWN)
-      }
-      // move forward 2
-      if (square <= 15 && square >= 8 && this.squares[square + DOWN].piece === "" && this.squares[square + DOWN + DOWN].piece === "") {
-        moves.push(square + DOWN + DOWN)
-      }
-      // capture left
-      if (square < 55 && square % 8 !== 0 && this.squares[square + DOWN_LEFT].piece !== "" && this.squares[square + DOWN_LEFT].piece.color !== piece.color) {
-        moves.push(square + DOWN_LEFT)
-      }
-      // capture right
-      if (square < 55 && square % 8 !== 7 && this.squares[square + DOWN_RIGHT].piece !== "" && this.squares[square + DOWN_RIGHT].piece.color !== piece.color) {
-        moves.push(square + DOWN_RIGHT)
-      }
-      // en passant left TODO: check if last move was a double pawn move
-      // en passant right
-
-      // promotion TODO: deal with this later
-    }
+  async pieceLegalMoves(square) {
+    console.log(square)
+    // []string
+    let moves = await requestLegalMoves(square)
+    // []int
+    moves = moves.map((location) => {parseIndexSquare(location)})
     return moves
   }
+}
+
+// parse board state string from server
+// and return a board object
+function parseBoardState(boardState) {
+  let board = new Board()
+  board.readBoardState(boardState)
+  return board
+}
+
+// parse the square index in chess notation
+// Input: 0-63
+// return a string e.g. 'a1'
+function parseSquareIndex(squareIndex) {
+  let file = squareIndex % 8
+  let rank = 8 - Math.floor(squareIndex / 8)
+  let fileString = ''
+  let rankString = rank.toString()
+  switch (file) {
+    case 0:
+      fileString = 'a'
+      break
+    case 1:
+      fileString = 'b'
+      break
+    case 2:
+      fileString = 'c'
+      break
+    case 3:
+      fileString = 'd'
+      break
+    case 4:
+      fileString = 'e'
+      break
+    case 5:
+      fileString = 'f'
+      break
+    case 6:
+      fileString = 'g'
+      break
+    case 7:
+      fileString = 'h'
+      break
+  }
+  return fileString + rankString
+}
+
+// parse square back to index
+function parseIndexSquare(square) {
+  let file = 0
+  let row = 8 - parseInt(square[1])
+
+  switch (square[0]) {
+    case "a":
+      file = 0
+      break
+    case "b":
+      file = 1
+      break
+    case "c":
+      file = 2
+      break
+    case "d":
+      file = 3
+      break
+    case "e":
+      file = 4
+      break
+    case "f":
+      file = 5
+      break
+    case "g":
+      file = 6
+      break
+    case "h":
+      file = 7
+  }
+
+  return file + row * 8
+}
+
+// Request a list of legal moves from the server
+// TODO: Finish this part
+async function requestLegalMoves(index) {
+  let location = parseSquareIndex(index)
+  let possibleMoves = await postData("http://localhost:9988/valid_moves", {"piece": location})
+  console.log(possibleMoves)
+  return possibleMoves.split(" ")
 }
 
 function App() {
@@ -149,7 +228,7 @@ function App() {
 
   const [legalMoves, setLegalMoves] = useState([])
 
-  //const [player, setPlayer] = useState('white')
+  const [player, setPlayer] = useState('')
 
   const handlePieceMove = (from, to) => {
     board.movePiece(from, to)
@@ -157,8 +236,83 @@ function App() {
     setSelectedSquare(-1)
   }
 
+  // Register to the server
+  // and get the board state
+  useEffect(() => {
+    // Initialization
+    fetch('http://localhost:9988/init', {// Adding method type
+    method: "POST",
+    body: JSON.stringify({
+        uid: '1234'
+    }),
+    headers: {"Content-type": "application/json; charset=UTF-8"}
+  }).
+    then((response) => {
+      return response.json()
+    })
+    .then((data) => {
+      console.log(data)
+      if (data.color === 1) {
+        setPlayer('white')
+      } else {
+        setPlayer('black')
+      }
+    }).catch((error) => {
+      console.log(error)
+      setPlayer('')
+    })
+
+    // get the board state every 1 second
+    const interval = setInterval(() => {
+      // If not registered, try to register again
+      if (player === '') {
+        fetch('http://localhost:9988/init', {// Adding method type
+        method: "POST",
+        body: JSON.stringify({
+            uid: '1234'
+        }),
+        headers: {"Content-type": "application/json; charset=UTF-8"}
+      })
+        .then((response) => {
+          return response.json()
+        })
+        .then((data) => {
+          //console.log(data)
+          if (data.color === 1) {
+            setPlayer('white')
+          } else {
+            setPlayer('black')
+          }
+        }).catch((error) => {
+          console.log(error)
+          setPlayer('')
+        })
+      }
+
+      fetch('http://localhost:9988/state', {uid: '1234'})
+      .then((response) => {
+        return response.json()
+      })
+      .then((data) => {
+        //console.log(data)
+        setBoard(parseBoardState(data.BoardState))
+      }).catch((error) => {
+        console.log(error)
+        setPlayer('')
+      })
+    }, 1000)
+
+    // Clear the interval when the component unmounts
+    return () => clearInterval(interval)
+
+  },[])
+
+
   return (
     <main className='w-auto h-screen bg-stone-800'>
+
+      {player==="" && <PopUp content="Connecting to the server..." />}
+
       <div className='flex flex-col items-center justify-center h-full '>
 
         <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
@@ -183,9 +337,19 @@ function App() {
   )
 }
 
+function PopUp ({content}) {
+  return (
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen bg-stone-900/50">
+      <div className="w-60 h-28 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
+        <p className='my-auto'>{content}</p>
+      </div>
+    </div>
+  )
+}
+
 function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves}) {
 
-  const handleOnClick = () => {
+  const handleOnClick = async () => {
     console.log("clicked", index)
     setLegalMoves([])
 
@@ -209,7 +373,8 @@ function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSel
     // if there is a piece on the square
     // set legal moves
     if (square.piece){
-      setLegalMoves(board.pieceLegalMoves(square.piece, index))
+      let moves = await board.pieceLegalMoves(index)
+      setLegalMoves(moves)
       setSelectedSquare(index)
     }
     

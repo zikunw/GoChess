@@ -607,6 +607,40 @@ func ValidMove(from Location, to Location, player int, b *Board) (bool, Move) {
 	return false, Move{' ', ' ', false, Location{0, 0}, Location{0, 0}}
 }
 
+// Deserialize a move from a string.
+// Example move: "d2d4"
+func DeserializeMove(s string, color int, b *Board) (bool, Move) {
+	fmt.Println("Deserializing move: " + s)
+	move := Move{' ', ' ', false, Location{0, 0}, Location{0, 0}}
+	if len(s) < 4 {
+		return false, move
+	}
+	fmt.Println("Check location")
+	// Check locations
+	isValid := true
+	var moveFrom Location
+	var moveTo Location
+	isValid, moveFrom = GridToLocation(s[0:2])
+	isValid, moveTo = GridToLocation(s[2:4])
+	if !isValid {
+		return false, move
+	}
+	fmt.Println("Check piece")
+	// Check piece
+	piece := b.GetPieceAtLocation(moveFrom)
+	if piece.IsEmpty() != true && piece.GetPlayer() != color {
+		return false, move
+	}
+	fmt.Println("Check move")
+	// Check if move is valid
+	isValid, move = ValidMove(moveFrom, moveTo, color, b)
+	if !isValid {
+		return false, move
+	}
+
+	return true, move
+}
+
 // Translate the move to algebraic notation
 func (m Move) ToString() string {
 	// Panic if the move is invalid.
@@ -655,9 +689,15 @@ func LocationToGrid(l Location) string {
 }
 
 // grid location to x,y
-func GridToLocation(grid string) Location {
-	//return int(grid[0] - 'a'), int(grid[1] - '1')
-	return Location{int(grid[1] - '1'), int(grid[0] - 'a')}
+// return (isValid, Location)
+func GridToLocation(grid string) (bool, Location) {
+	if len(grid) != 2 {
+		return false, Location{0, 0}
+	}
+	if grid[0] < 'a' || grid[0] > 'h' || grid[1] < '1' || grid[1] > '8' {
+		return false, Location{0, 0}
+	}
+	return true, Location{int(grid[1] - '1'), int(grid[0] - 'a')}
 }
 
 // Check if a given move is check.

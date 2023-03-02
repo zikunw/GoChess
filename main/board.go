@@ -489,11 +489,35 @@ func (b *Board) IsTerminal() bool {
 // TODO: FIX
 func (b *Board) Serialize() string {
 	serialized := ""
-	for i := 0; i < b.Height; i++ {
-		for j := 0; j < b.Width; j++ {
-			serialized += b.Locations[i][j].Serialize()
+	//for i := 0; i < b.Height; i++ {
+	//	for j := 0; j < b.Width; j++ {
+	//		serialized += b.Locations[i][j].Serialize()
+	//	}
+	//}
+
+	// Serialize the board in FEN
+	for row := b.Height - 1; row >= 0; row-- {
+		col := 0
+		for col < b.Width {
+			// If the location is empty, count the number of empty spaces.
+			if b.Locations[row][col].IsEmpty() {
+				emptyCount := 0
+				for col < b.Width && b.Locations[row][col].IsEmpty() {
+					emptyCount++
+					col++
+				}
+				serialized += fmt.Sprintf("%d", emptyCount)
+			} else {
+				serialized += b.Locations[row][col].Serialize()
+				col++
+			}
+		}
+		if row != 0 {
+			serialized += "/"
 		}
 	}
+
+	serialized += fmt.Sprintf(" %d", b.State)
 	serialized += fmt.Sprintf(" %d", b.HalfmoveClock)
 	serialized += fmt.Sprintf(" %d", b.FullmoveNumber)
 	serialized += fmt.Sprintf(" %t", b.WhiteQueenSideCastle)
@@ -509,17 +533,33 @@ func (b *Board) Deserialize(serialized string) {
 	boardInfo := strings.Split(serialized, " ")
 
 	piecePosition := boardInfo[0]
+
+	// Deserialize the board in FEN
+	// Piece placement
+	ranks := strings.Split(piecePosition, "/")
 	for i := 0; i < b.Height; i++ {
-		for j := 0; j < b.Width; j++ {
-			b.Locations[i][j] = DeserializePiece(string(piecePosition[i*b.Width+j]))
-			b.Locations[i][j].SetLocation(Location{i, j})
+		rank := ranks[7-i]
+		file := 0
+		for _, char := range rank {
+			if char >= '1' && char <= '8' {
+				file += int(char - '0')
+			} else {
+				// Check player
+				if char >= 'A' && char <= 'Z' {
+					b.Locations[i][file] = PlayerPiece{1, char, Location{i, file}}
+				} else {
+					b.Locations[i][file] = PlayerPiece{2, char & '_', Location{i, file}}
+				}
+				file++
+			}
 		}
 	}
 
-	b.HalfmoveClock, _ = strconv.Atoi(boardInfo[1])
-	b.FullmoveNumber, _ = strconv.Atoi(boardInfo[2])
-	b.WhiteQueenSideCastle, _ = strconv.ParseBool(boardInfo[3])
-	b.WhiteKingSideCastle, _ = strconv.ParseBool(boardInfo[4])
-	b.BlackQueenSideCastle, _ = strconv.ParseBool(boardInfo[5])
-	b.BlackKingSideCastle, _ = strconv.ParseBool(boardInfo[6])
+	b.State, _ = strconv.Atoi(boardInfo[1])
+	b.HalfmoveClock, _ = strconv.Atoi(boardInfo[2])
+	b.FullmoveNumber, _ = strconv.Atoi(boardInfo[3])
+	b.WhiteQueenSideCastle, _ = strconv.ParseBool(boardInfo[4])
+	b.WhiteKingSideCastle, _ = strconv.ParseBool(boardInfo[5])
+	b.BlackQueenSideCastle, _ = strconv.ParseBool(boardInfo[6])
+	b.BlackKingSideCastle, _ = strconv.ParseBool(boardInfo[7])
 }

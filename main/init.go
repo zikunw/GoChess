@@ -4,8 +4,12 @@ import "fmt"
 
 func main() {
 
+	remotePlayer := &RemotePlayer{}
+
 	game := Game{}
-	game.Init(&RemotePlayer{1, ""}, &MinimaxComputerPlayer{2, 3})
+	game.Init(remotePlayer, &MinimaxComputerPlayer{2, 3})
+
+	remotePlayer.Init(1, &game.Board)
 
 	game.Print()
 	for {

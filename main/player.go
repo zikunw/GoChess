@@ -45,7 +45,11 @@ func (p *HumanPlayer) GetMove(b *Board) Move {
 			continue
 		}
 		// parse the text into a move
-		from = GridToLocation(text)
+		isValid, from = GridToLocation(text)
+		if isValid == false {
+			fmt.Print("Invalid piece. ")
+			continue
+		}
 		piece := b.GetPieceAtLocation(from)
 		if piece.IsEmpty() != true && piece.GetPlayer() == p.Color {
 			break
@@ -68,7 +72,11 @@ func (p *HumanPlayer) GetMove(b *Board) Move {
 			continue
 		}
 		// parse the text into a move
-		to = GridToLocation(text)
+		isValid, to = GridToLocation(text)
+		if isValid == false {
+			fmt.Print("Invalid piece. ")
+			continue
+		}
 		// check if the move is legal
 		isValid, move = ValidMove(from, to, p.Color, b)
 		if isValid {
