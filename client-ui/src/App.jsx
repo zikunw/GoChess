@@ -385,7 +385,7 @@ function HorizontalLabel () {
 
 function PopUp ({content}) {
   return (
-    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen bg-stone-900/50">
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
       <div className="w-60 h-28 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
         <p className='my-auto'>{content}</p>
       </div>

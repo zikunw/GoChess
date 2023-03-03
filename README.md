@@ -70,3 +70,7 @@ Output:
 - [x] simple chess playing bots
 - [ ] A javascript interface (maybe)
 
+## Bug List
+- [ ] Pawn only promotes to queen
+- [ ] Pawn does not capture when it is on col 7
+- [ ] The game will automatically exit without showing anything on the UI
