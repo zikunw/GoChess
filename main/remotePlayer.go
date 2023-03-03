@@ -39,7 +39,7 @@ type RemotePlayer struct {
 func (p *RemotePlayer) Init(color int, b *Board) {
 	p.Color = color
 	p.uid = ""
-	p.playerMove = make(chan Move)
+	p.playerMove = make(chan Move, 1)
 	p.board = b
 }
 
@@ -92,11 +92,11 @@ func (p *RemotePlayer) initHandler(w http.ResponseWriter, r *http.Request) {
 
 	//fmt.Println("initHandler called")
 
-	if p.uid != "" {
-		fmt.Println("Client already registered")
-		fmt.Fprintf(w, "client already registered")
-		return
-	}
+	//if p.uid != "" {
+	//	fmt.Println("Client already registered")
+	//	fmt.Fprintf(w, "client already registered")
+	//	return
+	//}
 
 	// Recieve the uid from the client
 	// register the client
@@ -104,7 +104,7 @@ func (p *RemotePlayer) initHandler(w http.ResponseWriter, r *http.Request) {
 	var initRequest InitRequest
 	json.Unmarshal(reqBody, &initRequest)
 
-	fmt.Println(string(reqBody))
+	p.uid = fmt.Sprintf("%d", initRequest.uid)
 
 	response := InitResponse{Color: p.Color}
 	jsonResponse, _ := json.Marshal(response)
@@ -114,23 +114,49 @@ func (p *RemotePlayer) initHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResponse)
 }
 
+type moveRequest struct {
+	Move string `json:"move"`
+}
+
+type moveResponse struct {
+	Err string `json:"err"`
+}
+
 // The client send the move to the server
 // TODO: Need to return a json
 func (p *RemotePlayer) moveHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("moveHandler called")
 
-	// Recieve the move from the client
-	isValid, move := DeserializeMove(r.FormValue("move"), p.Color, p.board)
+	enableCors(&w)
 
+	moveRequest := moveRequest{}
+	json.NewDecoder(r.Body).Decode(&moveRequest)
+
+	// Recieve the move from the client
+	isValid, move := DeserializeMove(moveRequest.Move, p.Color, p.board)
+	fmt.Println("1")
 	if isValid == false {
 		fmt.Println("Invalid move received from client")
-		fmt.Fprintf(w, "invalid move")
+		response := moveResponse{"Invalid move"}
+		jsonResponse, _ := json.Marshal(response)
+		w.Write(jsonResponse)
 		return
 	}
+	fmt.Println("2")
+	response := moveResponse{""}
+	jsonResponse, err := json.Marshal(response)
+	fmt.Println("3")
+	if err != nil {
+		fmt.Println("Error marshalling response")
+	}
+	fmt.Println("4")
 
-	fmt.Fprintf(w, "move received")
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
 
-	// Send the move to the player
+	fmt.Println(move)
+
+	// Send the move to the player controller
 	p.playerMove <- move
 }
 
@@ -144,19 +170,18 @@ type validMoveResponse struct {
 }
 
 // The client will request valid moves from the server
-// TODO: Need to return a json
 func (p *RemotePlayer) validMovesHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	w.Header().Set("Content-Type", "application/json")
 
-	fmt.Println("validMovesHandler called")
+	//fmt.Println("validMovesHandler called")
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var request validMoveRequest
 	json.Unmarshal(reqBody, &request)
 
 	// Check the location
-	fmt.Println(request.Piece)
-	fmt.Println(GridToLocation(request.Piece))
+	//fmt.Println(request.Piece)
+	//fmt.Println(GridToLocation(request.Piece))
 	isValid, location := GridToLocation(request.Piece)
 	if isValid == false {
 		fmt.Println("Invalid location received from client")
@@ -217,8 +242,6 @@ type BoardStateResponse struct {
 // return the current board state to the client
 func (p *RemotePlayer) boardHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-
-	//fmt.Println("boardHandler called")
 
 	boardState := p.board.Serialize()
 	boardStateResponse := BoardStateResponse{BoardState: boardState}

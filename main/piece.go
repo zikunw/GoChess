@@ -615,7 +615,7 @@ func DeserializeMove(s string, color int, b *Board) (bool, Move) {
 	if len(s) < 4 {
 		return false, move
 	}
-	fmt.Println("Check location")
+	//fmt.Println("Check location")
 	// Check locations
 	isValid := true
 	var moveFrom Location
@@ -625,13 +625,13 @@ func DeserializeMove(s string, color int, b *Board) (bool, Move) {
 	if !isValid {
 		return false, move
 	}
-	fmt.Println("Check piece")
+	//fmt.Println("Check piece")
 	// Check piece
 	piece := b.GetPieceAtLocation(moveFrom)
 	if piece.IsEmpty() != true && piece.GetPlayer() != color {
 		return false, move
 	}
-	fmt.Println("Check move")
+	//fmt.Println("Check move")
 	// Check if move is valid
 	isValid, move = ValidMove(moveFrom, moveTo, color, b)
 	if !isValid {

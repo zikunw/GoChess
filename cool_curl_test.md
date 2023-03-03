@@ -5,6 +5,12 @@ curl --data "move=d2d4" localhost:9988/move
 curl --data "location=e2" localhost:9988/valid_moves
 ```
 
+Json
+``` shell
+curl -X POST localhost:9988/init -H 'Content-Type: application/json' -d '{"uid":"1234"}'
+curl -X POST localhost:9988/move -H 'Content-Type: application/json' -d '{"move":"d2d4"}'
+```
+
 fen/state/halfmove/fullmove/wqcastle/wkcastle/bqcastle/bkcastle
 
 {

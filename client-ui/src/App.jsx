@@ -223,6 +223,12 @@ async function requestLegalMoves(index) {
   return possibleMoves.validsquares.split(" ")
 }
 
+async function updateBoardState() {
+  let response = await postData("http://localhost:9988/state", {})
+  console.log(response)
+  return response.BoardState
+}
+
 function App() {
 
   const [board, setBoard] = useState(new Board())
@@ -232,9 +238,13 @@ function App() {
 
   const [player, setPlayer] = useState('')
 
-  const handlePieceMove = (from, to) => {
-    board.movePiece(from, to)
-    setBoard(board)
+  const handlePieceMove = async (from, to) => {
+    let move = parseSquareIndex(from) + parseSquareIndex(to)
+    let response = await postData("http://localhost:9988/move", {"move": move})
+    console.log(response)
+    updateBoardState().then((boardState) => {
+      setBoard(parseBoardState(boardState))
+    })
     setSelectedSquare(-1)
   }
 
@@ -243,12 +253,10 @@ function App() {
   useEffect(() => {
     // Initialization
     fetch('http://localhost:9988/init', {// Adding method type
-    method: "POST",
-    body: JSON.stringify({
-        uid: '1234'
-    }),
-    headers: {"Content-type": "application/json; charset=UTF-8"}
-  }).
+      method: "POST",
+      body: JSON.stringify({uid: '1234'}),
+      headers: {"Content-type": "application/json; charset=UTF-8"}
+    }).
     then((response) => {
       return response.json()
     })
