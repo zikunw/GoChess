@@ -325,25 +325,61 @@ function App() {
 
       <div className='flex flex-col items-center justify-center h-full '>
 
-        <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
-          {
-            board.squares.map((square, index) => (
-            <SquareDisplay 
-              key={index} 
-              index={index} 
-              square={square}
-              board={board}
-              selectedSquare={selectedSquare} 
-              legalMoves={legalMoves}
-              setSelectedSquare={setSelectedSquare}
-              handlePieceMove={handlePieceMove}
-              setLegalMoves={setLegalMoves}
-              /> ))
-          }
+        <HorizontalLabel />
+        <div className='flex flex-row'>
+          <VerticalLabel />
+          <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
+            {
+              board.squares.map((square, index) => (
+              <SquareDisplay 
+                key={index} 
+                index={index} 
+                square={square}
+                board={board}
+                selectedSquare={selectedSquare} 
+                legalMoves={legalMoves}
+                setSelectedSquare={setSelectedSquare}
+                handlePieceMove={handlePieceMove}
+                setLegalMoves={setLegalMoves}
+                /> ))
+            }
+          </div>
+          <VerticalLabel />
         </div>
+        <HorizontalLabel />
 
       </div>
     </main>
+  )
+}
+
+function VerticalLabel () {
+  return (
+    <div className="w-12 h-96 flex flex-col items-center justify-around">
+      <p className="text-stone-400 text-md">8</p>
+      <p className="text-stone-400 text-md">7</p>
+      <p className="text-stone-400 text-md">6</p>
+      <p className="text-stone-400 text-md">5</p>
+      <p className="text-stone-400 text-md">4</p>
+      <p className="text-stone-400 text-md">3</p>
+      <p className="text-stone-400 text-md">2</p>
+      <p className="text-stone-400 text-md">1</p>
+    </div>
+  )
+}
+
+function HorizontalLabel () {
+  return (
+    <div className="w-96 h-12 flex flex-row items-center justify-around">
+      <p className="text-stone-400 text-md">a</p>
+      <p className="text-stone-400 text-md">b</p>
+      <p className="text-stone-400 text-md">c</p>
+      <p className="text-stone-400 text-md">d</p>
+      <p className="text-stone-400 text-md">e</p>
+      <p className="text-stone-400 text-md">f</p>
+      <p className="text-stone-400 text-md">g</p>
+      <p className="text-stone-400 text-md">h</p>
+    </div>
   )
 }
 

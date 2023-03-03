@@ -45,6 +45,10 @@ type Location struct {
 	Y int
 }
 
+func (l *Location) Equals(l2 Location) bool {
+	return l.X == l2.X && l.Y == l2.Y
+}
+
 // Get the chebychev distance between two locations
 func (l *Location) Distance(l2 Location) int {
 	x := l.X - l2.X
@@ -299,6 +303,7 @@ func (b *Board) GetPlayerMovesExceptKing(player int) []Move {
 
 // Get all the legal moves for the given player.
 // This function uses GetPlayerMoves() and filters out moves that put the player in check.
+// TODO: HUGE bug here
 func (b *Board) GetPlayerLegalMoves(player int) []Move {
 	moves := b.GetPlayerMoves(player)
 	legalMoves := make([]Move, 0)
@@ -318,9 +323,16 @@ func (b *Board) GetPlayerLegalMoves(player int) []Move {
 	for _, move := range moves {
 		newBoard := b.Copy()
 		newBoard.MakeMove(move)
-		if !newBoard.CheckPlayerInCheck(player) && move.To.Distance(enemyKingLoc) > 1 {
-			legalMoves = append(legalMoves, move)
+		piece := newBoard.GetPieceAtLocation(move.To)
+		if !newBoard.CheckPlayerInCheck(player) {
+			if piece.GetType() != 'K' {
+				legalMoves = append(legalMoves, move)
+			}
+			if piece.GetType() == 'K' && move.To.Distance(enemyKingLoc) > 1 {
+				legalMoves = append(legalMoves, move)
+			}
 		}
+
 	}
 	return legalMoves
 }
