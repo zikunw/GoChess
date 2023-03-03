@@ -127,9 +127,11 @@ class Board {
     console.log(square)
     // []string
     let moves = await requestLegalMoves(square)
+    console.log(moves)
     // []int
-    moves = moves.map((location) => {parseIndexSquare(location)})
-    return moves
+    let moveIndices = moves.map(location => parseIndexSquare(location))
+    console.log(moveIndices)
+    return moveIndices
   }
 }
 
@@ -218,7 +220,7 @@ async function requestLegalMoves(index) {
   let location = parseSquareIndex(index)
   let possibleMoves = await postData("http://localhost:9988/valid_moves", {"piece": location})
   console.log(possibleMoves)
-  return possibleMoves.split(" ")
+  return possibleMoves.validsquares.split(" ")
 }
 
 function App() {

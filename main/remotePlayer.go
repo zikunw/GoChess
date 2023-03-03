@@ -100,8 +100,6 @@ func (p *RemotePlayer) initHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Recieve the uid from the client
 	// register the client
-	//p.uid = r.FormValue("uid")
-	//fmt.Println("UID:", p.uid)
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var initRequest InitRequest
 	json.Unmarshal(reqBody, &initRequest)
@@ -136,6 +134,10 @@ func (p *RemotePlayer) moveHandler(w http.ResponseWriter, r *http.Request) {
 	p.playerMove <- move
 }
 
+type validMoveRequest struct {
+	Piece string `json:"piece"`
+}
+
 type validMoveResponse struct {
 	Err          string `json:"err"`
 	ValidSquares string `json:"validsquares"`
@@ -148,11 +150,14 @@ func (p *RemotePlayer) validMovesHandler(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 
 	fmt.Println("validMovesHandler called")
+	reqBody, _ := ioutil.ReadAll(r.Body)
+	var request validMoveRequest
+	json.Unmarshal(reqBody, &request)
 
 	// Check the location
-	fmt.Println(r.FormValue("piece"))
-	fmt.Println(GridToLocation(r.FormValue("piece")))
-	isValid, location := GridToLocation(r.FormValue("piece"))
+	fmt.Println(request.Piece)
+	fmt.Println(GridToLocation(request.Piece))
+	isValid, location := GridToLocation(request.Piece)
 	if isValid == false {
 		fmt.Println("Invalid location received from client")
 		response := validMoveResponse{"Invalid location", ""}
