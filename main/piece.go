@@ -299,7 +299,6 @@ func (p PlayerPiece) GetPawnMoves(b *Board) []Move {
 }
 
 // Get all the possible moves for a rook.
-// TODO: BUG
 func (p PlayerPiece) GetRookMoves(b *Board) []Move {
 	moves := []Move{}
 	rowNum := p.Location.X
@@ -391,7 +390,6 @@ func (p PlayerPiece) GetKnightMoves(b *Board) []Move {
 }
 
 // Get all the possible moves for a bishop.
-// TODO: BUG
 func (p PlayerPiece) GetBishopMoves(b *Board) []Move {
 	moves := []Move{}
 	// Displacement

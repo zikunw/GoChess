@@ -356,14 +356,14 @@ function App() {
 function VerticalLabel () {
   return (
     <div className="w-12 h-96 flex flex-col items-center justify-around">
-      <p className="text-stone-400 text-md">8</p>
-      <p className="text-stone-400 text-md">7</p>
-      <p className="text-stone-400 text-md">6</p>
-      <p className="text-stone-400 text-md">5</p>
-      <p className="text-stone-400 text-md">4</p>
-      <p className="text-stone-400 text-md">3</p>
-      <p className="text-stone-400 text-md">2</p>
-      <p className="text-stone-400 text-md">1</p>
+      <p className="text-stone-400 text-md font-mono font-thin">8</p>
+      <p className="text-stone-400 text-md font-mono font-thin">7</p>
+      <p className="text-stone-400 text-md font-mono font-thin">6</p>
+      <p className="text-stone-400 text-md font-mono font-thin">5</p>
+      <p className="text-stone-400 text-md font-mono font-thin">4</p>
+      <p className="text-stone-400 text-md font-mono font-thin">3</p>
+      <p className="text-stone-400 text-md font-mono font-thin">2</p>
+      <p className="text-stone-400 text-md font-mono font-thin">1</p>
     </div>
   )
 }
@@ -371,14 +371,14 @@ function VerticalLabel () {
 function HorizontalLabel () {
   return (
     <div className="w-96 h-12 flex flex-row items-center justify-around">
-      <p className="text-stone-400 text-md">a</p>
-      <p className="text-stone-400 text-md">b</p>
-      <p className="text-stone-400 text-md">c</p>
-      <p className="text-stone-400 text-md">d</p>
-      <p className="text-stone-400 text-md">e</p>
-      <p className="text-stone-400 text-md">f</p>
-      <p className="text-stone-400 text-md">g</p>
-      <p className="text-stone-400 text-md">h</p>
+      <p className="text-stone-400 text-md font-mono font-thin">a</p>
+      <p className="text-stone-400 text-md font-mono font-thin">b</p>
+      <p className="text-stone-400 text-md font-mono font-thin">c</p>
+      <p className="text-stone-400 text-md font-mono font-thin">d</p>
+      <p className="text-stone-400 text-md font-mono font-thin">e</p>
+      <p className="text-stone-400 text-md font-mono font-thin">f</p>
+      <p className="text-stone-400 text-md font-mono font-thin">g</p>
+      <p className="text-stone-400 text-md font-mono font-thin">h</p>
     </div>
   )
 }
