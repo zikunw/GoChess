@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import useWebSocket from 'react-use-websocket'
+
+const WS_URL = 'ws://127.0.0.1:8000/ws';
 
 // piece png
 import blackPawn from './assets/black_pawn.png'
@@ -229,108 +232,99 @@ async function updateBoardState() {
   return response.BoardState
 }
 
+
+
 function App() {
 
   const [board, setBoard] = useState(new Board())
   const [selectedSquare, setSelectedSquare] = useState(-1)
-
   const [legalMoves, setLegalMoves] = useState([])
 
-  const [player, setPlayer] = useState('')
+  const [username, setUsername] = useState('')
+  const [opponent, setOpponent] = useState('')
+  const [room, setRoom] = useState('')
 
-  const handlePieceMove = async (from, to) => {
-    let move = parseSquareIndex(from) + parseSquareIndex(to)
-    let response = await postData("http://localhost:9988/move", {"move": move})
-    console.log(response)
-    updateBoardState().then((boardState) => {
-      setBoard(parseBoardState(boardState))
-    })
-    setSelectedSquare(-1)
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const [isConnected, setIsConnected] = useState(false)
+
+  const {
+    sendMessage,
+    sendJsonMessage,
+    lastMessage,
+    lastJsonMessage,
+    readyState,
+    getWebSocket
+  } = useWebSocket(WS_URL, {
+    onOpen: () => {
+      setIsConnected(true) 
+      console.log('WebSocket connection established.');
+    },
+    onMessage: (event) => {
+      console.log(event)
+      handleIncomingMessage(event.data)
+    },
+    onError: (event) => {
+      console.log(event)
+    },
+    onClose: () => {
+      setIsConnected(false)
+      console.log('WebSocket connection closed.');
+    },
+  });
+
+  // handle incoming messages
+  const handleIncomingMessage = (message) => {
+    console.log(message)
+    let data = JSON.parse(message)
+    switch (data.type) {
+      case "roomCreated":
+        setRoom(data.data)
+        break
+    }
   }
 
-  // Register to the server
-  // and get the board state
-  useEffect(() => {
-    // Initialization
-    fetch('http://localhost:9988/init', {// Adding method type
-      method: "POST",
-      body: JSON.stringify({uid: '1234'}),
-      headers: {"Content-type": "application/json; charset=UTF-8"}
-    }).
-    then((response) => {
-      return response.json()
-    })
-    .then((data) => {
-      console.log(data)
-      if (data.color === 1) {
-        setPlayer('white')
-      } else {
-        setPlayer('black')
-      }
-    }).catch((error) => {
-      console.log(error)
-      setPlayer('')
-    })
+  // handle username change and register to the server
+  const handleUsernameChange = async (username) => {
+    setUsername(username)
+    sendJsonMessage({type: "registerUsername", data: username})
+  }
 
-    // get the board state every 1 second
-    const interval = setInterval(() => {
-      // If not registered, try to register again
-      if (player === '') {
-        fetch('http://localhost:9988/init', {// Adding method type
-        method: "POST",
-        body: JSON.stringify({
-            uid: '1234'
-        }),
-        headers: {"Content-type": "application/json; charset=UTF-8"}
-      })
-        .then((response) => {
-          return response.json()
-        })
-        .then((data) => {
-          //console.log(data)
-          if (data.color === 1) {
-            setPlayer('white')
-          } else {
-            setPlayer('black')
-          }
-        }).catch((error) => {
-          console.log(error)
-          setPlayer('')
-        })
-      }
+  // create a new room
+  const handleCreateRoom = async () => {
+    console.log("create room")
+    sendJsonMessage({type: "createRoom", data: ""})
+  }
 
-      fetch('http://localhost:9988/state', {uid: '1234'})
-      .then((response) => {
-        return response.json()
-      })
-      .then((data) => {
-        //console.log(data)
-        setBoard(parseBoardState(data.BoardState))
-      }).catch((error) => {
-        console.log(error)
-        setPlayer('')
-      })
-    }, 1000)
+  // join a room
+  const handleJoinRoom = async (room) => {
+    sendJsonMessage({type: "joinRoom", data: {username: username, room: room}})
+  }
 
-    // Clear the interval when the component unmounts
-    return () => clearInterval(interval)
+  const handlePieceMove = async (from, to) => {
 
-  },[])
+  }
 
 
   return (
     <main className='w-auto h-screen bg-stone-800'>
 
-      {player==="" && <PopUp content="Connecting to the server..." />}
+      {!isConnected && <PopUp content="Connecting to the server..." />}
+      {isConnected && !username && <UsernamePopUp handleUsernameChange={handleUsernameChange} />}
+      {isConnected && username && !room && <RoomPopUp handleCreateRoom={handleCreateRoom} handleJoinRoom={handleJoinRoom} />}
 
-      <div className='flex flex-col items-center justify-center h-full '>
 
-        <HorizontalLabel />
-        <div className='flex flex-row'>
-          <VerticalLabel />
-          <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
-            {
-              board.squares.map((square, index) => (
+      <div className='flex flex-row items-center justify-center h-full '>
+
+        {!!errorMsg && <ErrorMsg content={errorMsg} />}
+
+        <div className='flex flex-col items-center justify-center'>
+          <HorizontalLabel />
+          <div className='flex flex-row'>
+            <VerticalLabel />
+            <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
+              {
+                board.squares.map((square, index) => (
               <SquareDisplay 
                 key={index} 
                 index={index} 
@@ -341,15 +335,28 @@ function App() {
                 setSelectedSquare={setSelectedSquare}
                 handlePieceMove={handlePieceMove}
                 setLegalMoves={setLegalMoves}
-                /> ))
-            }
+                  /> ))
+              }
+            </div>
+            <VerticalLabel />
           </div>
-          <VerticalLabel />
+          <HorizontalLabel />
         </div>
-        <HorizontalLabel />
+
+        <div className="bg-stone-700 w-36 h-96 p-2">
+              <p className='text-white'>{username} v.s. {opponent}</p>
+        </div>
 
       </div>
     </main>
+  )
+}
+
+function ErrorMsg (props) {
+  return (
+    <div className="bg-red-500 absolute left-2 top-2 w-96 h-8 flex flex-row items-center justify-center">
+      <p className="text-white font-mono font-thin text-sm">Error: {props.content}</p>
+    </div>
   )
 }
 
@@ -393,12 +400,52 @@ function PopUp ({content}) {
   )
 }
 
+function UsernamePopUp ({handleUsernameChange}) {
+  const [usernameInput, setUsernameInput] = useState('')
+  
+
+  return (
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
+      <div className="w-60 p-5 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
+        <p className='my-4'>Enter your username:</p>
+        <input className="w-full px-2 h-8 mb-2 rounded-md border-2" type="text" onChange={(e) => setUsernameInput(e.target.value)} />
+        <button className="w-full h-8 rounded-md bg-stone-800 my-4 text-white" onClick={() => handleUsernameChange(usernameInput)}>Submit</button>
+      </div>
+    </div>
+  )
+}
+
+function RoomPopUp ({handleCreateRoom, handleJoinRoom}) {
+  const [roomInput, setRoomInput] = useState('')
+
+  return (
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
+      <div className="w-60 p-2 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start divide-y-2">
+        <div className='w-full'>
+          <p className='mt-2'>Create a room?</p>
+          <button className="w-full p-2 rounded-md bg-stone-800 my-4 text-white" onClick={handleCreateRoom}>Create</button>
+        </div>
+        
+        <div>
+          <p className='my-4'>Or join a room:</p>
+          <div className="w-full mb-2 flex flex-row items-center justify-center">
+            <input className="w-full p-2  rounded-md border-2" type="text" onChange={(e) => setRoomInput(e.target.value)}/>
+            <button className="p-2 rounded-md bg-stone-800  text-white" onClick={() => handleJoinRoom(roomInput)}>Join</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves}) {
 
   const handleOnClick = async () => {
     console.log("clicked", index)
     setLegalMoves([])
 
+    // if the square is already selected
+    // cancel selection
     if (selectedSquare === index) {
       setSelectedSquare(-1)
       return
