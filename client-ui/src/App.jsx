@@ -267,19 +267,40 @@ function App() {
         setRoom(data.data)
         break
       case "roomStatus":
+        let roomInfo = JSON.parse(data.data)
+        // if it is empty string, reinitialize the all the states
+        if (roomInfo.name === "") {
+          setRoom("")
+          setRoomStatus("")
+          setIsWhite(true)
+          setOpponent("")
+          setBoard(new Board())
+          setSelectedSquare(-1)
+          setLegalMoves([])
+          return
+        }
+
         // set room status
-        setRoom(JSON.parse(data.data).name)
-        setRoomStatus(JSON.parse(data.data).status)
+        setRoom(roomInfo.name)
+        setRoomStatus(roomInfo.status)
         // set player color
-        let playerColor = JSON.parse(data.data).white === username ? "white" : "black"
+        let playerColor = roomInfo.white === username ? "white" : "black"
         setIsWhite(playerColor === "white")
-        let opp = JSON.parse(data.data).white === username ? JSON.parse(data.data).black : JSON.parse(data.data).white
+        let opp = roomInfo.white === username ? roomInfo.black : roomInfo.white
         setOpponent(opp)
         break
       case "legalMoves":
         let moves = data.data === "" ? [] : data.data.split(',')
         let moveIndices = moves.map(move => parseIndexSquare(move))
         setLegalMoves(moveIndices)
+        break
+
+      case "gameState":
+        let boardState = parseBoardState(data.data)
+        setBoard(boardState)
+        break
+
+      
     }
   }
 
@@ -316,7 +337,9 @@ function App() {
   }
 
   const handlePieceMove = async (from, to) => {
-
+    let fromSquare = parseSquareIndex(from)
+    let toSquare = parseSquareIndex(to)
+    sendJsonMessage({type: "movePiece", data: fromSquare + "," + toSquare})
   }
 
   // ping the server to stay connected
@@ -515,9 +538,8 @@ function SquareDisplay ({isWhite, index, square, board, selectedSquare,legalMove
       // check if legal move
       if (legalMoves.includes(index)){
         handlePieceMove(selectedSquare, index)
-      } else {
-        setSelectedSquare(-1)
       }
+      setSelectedSquare(-1)
       return
     }
     
@@ -540,7 +562,6 @@ function SquareDisplay ({isWhite, index, square, board, selectedSquare,legalMove
     <div 
       onClick={handleOnClick} 
       className={`aspect-square relative ${(index===selectedSquare || (legalMoves.includes(index)) && <div className="aspect-square bg-green-500 opacity-50 static"></div>) ? 'bg-red-400' :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
-        <p className="absolute left-1 top-0 text-sm">{index}</p>
         {square.piece && <PieceDisplay piece={square.piece} />}
     </div>
   )

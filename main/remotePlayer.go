@@ -31,3 +31,7 @@ func (p *RemotePlayer) GetMove(b *Board) Move {
 
 	return move
 }
+
+func (p *RemotePlayer) SendMove(move Move) {
+	p.playerMove <- move
+}

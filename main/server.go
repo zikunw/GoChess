@@ -74,6 +74,9 @@ func (s *Server) reader(conn *websocket.Conn) {
 	//conn.SetReadDeadline(time.Now().Add(pongWait))
 	//conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
+	// reinitialize the player board status
+	s.sendEmptyStatus(player)
+
 	for {
 		// read in a message
 		// we assume all mesaages are json
@@ -301,6 +304,60 @@ func (s *Server) respond(player *Player, message []byte) {
 		if err != nil {
 			log.Println(err)
 			return
+		}
+
+	// make a move
+	case "movePiece":
+		// check if player is in a room
+		if player.room == nil {
+			fmt.Println("Player is not in a room")
+			return
+		}
+		// check if player is in a game
+		if player.room.game == nil {
+			fmt.Println("There is no game in this room")
+			return
+		}
+		// check if it is the player's turn
+		playerColor := -1
+		if player == player.room.white {
+			playerColor = 1
+		} else if player == player.room.black {
+			playerColor = 2
+		} else {
+			return
+		}
+		if playerColor != player.room.game.Board.State {
+			return
+		}
+
+		// check locations
+		fromLocation := strings.Split(clientMessage.Data, ",")[0]
+		toLocation := strings.Split(clientMessage.Data, ",")[1]
+		isValid, from := GridToLocation(fromLocation)
+		if isValid == false {
+			fmt.Println("Invalid location received from client")
+			return
+		}
+		isValid, to := GridToLocation(toLocation)
+		if isValid == false {
+			fmt.Println("Invalid location received from client")
+			return
+		}
+
+		// check if the move is legal
+		var move Move
+		isValid, move = ValidMove(from, to, playerColor, &player.room.game.Board)
+		if isValid == false {
+			fmt.Println("Invalid move received from client")
+			break
+		}
+
+		// make the move
+		if playerColor == 1 {
+			player.room.game.WhitePlayer.SendMove(move)
+		} else if playerColor == 2 {
+			player.room.game.BlackPlayer.SendMove(move)
 		}
 
 	default:
@@ -555,5 +612,35 @@ func (s *Server) sendRoomStatus(room *Room) {
 			log.Println(err)
 			return
 		}
+	}
+}
+
+// send empty status to reinitialize the client
+func (s *Server) sendEmptyStatus(player *Player) {
+	roomStatus := &RoomStatus{
+		Name:   "",
+		Status: 0,
+		White:  "",
+		Black:  "",
+	}
+
+	roomStatusJSON, err := json.Marshal(roomStatus)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	serverMessage := &ServerMessage{
+		Type: "roomStatus",
+		Data: string(roomStatusJSON),
+	}
+	serverMessageJSON, err := json.Marshal(serverMessage)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = player.conn.WriteMessage(websocket.TextMessage, serverMessageJSON)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }
