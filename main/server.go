@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -136,6 +137,85 @@ func (s *Server) respond(player *Player, message []byte) {
 
 	// join a room
 	case "joinRoom":
+		fmt.Println("Joining room: ", clientMessage.Data)
+		roomName := clientMessage.Data
+		room, ok := s.rooms[roomName]
+		// check if the room exists
+		if !ok {
+			// send error message back to client
+			serverError := &ServerError{
+				Error: "Room does not exist",
+			}
+			serverErrorJSON, err := json.Marshal(serverError)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			err = player.conn.WriteMessage(websocket.TextMessage, serverErrorJSON)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			return
+		}
+		// check if the room is full
+		if room.black != nil && room.white != nil {
+			// send error message back to client
+			serverError := &ServerError{
+				Error: "Room is full",
+			}
+			serverErrorJSON, err := json.Marshal(serverError)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			err = player.conn.WriteMessage(websocket.TextMessage, serverErrorJSON)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			return
+		}
+		// join the room
+		s.joinRoom(room, player)
+		// send room name back to client
+		serverMessage := &ServerMessage{
+			Type: "roomJoined",
+			Data: roomName,
+		}
+		serverMessageJSON, err := json.Marshal(serverMessage)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		err = player.conn.WriteMessage(websocket.TextMessage, serverMessageJSON)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+	// request room names
+	// for debugging
+	case "requestRooms":
+		rooms := []string{}
+		for _, room := range s.rooms {
+			rooms = append(rooms, room.name)
+		}
+		// send room names back to client
+		serverMessage := &ServerMessage{
+			Type: "rooms",
+			Data: strings.Join(rooms, ","),
+		}
+		serverMessageJSON, err := json.Marshal(serverMessage)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		err = player.conn.WriteMessage(websocket.TextMessage, serverMessageJSON)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 
 	default:
 		fmt.Println("Unknown message type: ", clientMessage.Type)
@@ -248,5 +328,65 @@ func (s *Server) leaveRoom(room *Room, player *Player) {
 	// if the room is waiting for a player, change the status
 	if room.white == nil || room.black == nil {
 		room.status = "waiting"
+	}
+}
+
+// join player to the room
+func (s *Server) joinRoom(room *Room, player *Player) {
+	// join player to the room
+	if room.white == nil {
+		room.white = player
+	}
+	if room.black == nil {
+		room.black = player
+	}
+
+	// if the room is full, change the status
+	if room.white != nil && room.black != nil {
+		// send room status to the players
+		s.sendRoomStatus(room)
+		room.status = "playing"
+	}
+}
+
+type RoomStatus struct {
+	White string `json:"white"`
+	Black string `json:"black"`
+}
+
+// send room status to the players
+func (s *Server) sendRoomStatus(room *Room) {
+	// send room status to the players
+	roomStatus := &RoomStatus{
+		White: room.white.name,
+		Black: room.black.name,
+	}
+	roomStatusJSON, err := json.Marshal(roomStatus)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	serverMessage := &ServerMessage{
+		Type: "roomStatus",
+		Data: string(roomStatusJSON),
+	}
+	serverMessageJSON, err := json.Marshal(serverMessage)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if room.white != nil {
+		err = room.white.conn.WriteMessage(websocket.TextMessage, serverMessageJSON)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+	if room.black != nil {
+		err = room.black.conn.WriteMessage(websocket.TextMessage, serverMessageJSON)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 }

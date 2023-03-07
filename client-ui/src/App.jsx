@@ -27,24 +27,9 @@ const UP_RIGHT = UP + RIGHT
 const DOWN_LEFT = DOWN + LEFT
 const DOWN_RIGHT = DOWN + RIGHT
 
-// Post function
-// From: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-async function postData(url = "", data = {}) {
-  // Default options are marked with *
-  const response = await fetch(url, {
-    method: "POST", // *GET, POST, PUT, DELETE, etc.
-    mode: "cors", // no-cors, *cors, same-origin
-    cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
-    credentials: "same-origin", // include, *same-origin, omit
-    headers: {
-      "Content-Type": "application/json",
-      // 'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    redirect: "follow", // manual, *follow, error
-    referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-    body: JSON.stringify(data), // body data type must match "Content-Type" header
-  });
-  return response.json(); // parses JSON response into native JavaScript objects
+// cauculate the correct index when play black
+function blackIndex(index) {
+  return 63 - index
 }
 
 // information about a board square
@@ -240,6 +225,7 @@ function App() {
   const [selectedSquare, setSelectedSquare] = useState(-1)
   const [legalMoves, setLegalMoves] = useState([])
 
+  const [isWhite, setIsWhite] = useState(true)
   const [username, setUsername] = useState('')
   const [opponent, setOpponent] = useState('')
   const [room, setRoom] = useState('')
@@ -277,10 +263,27 @@ function App() {
   const handleIncomingMessage = (message) => {
     console.log(message)
     let data = JSON.parse(message)
+
+    // Check error message
+    if (data.error) {
+      setErrorMsg(data.error)
+      return
+    }
+
     switch (data.type) {
       case "roomCreated":
         setRoom(data.data)
         break
+      case "roomJoined":
+        setRoom(data.data)
+        break
+      case "roomStatus":
+        let playerColor = JSON.parse(data.data).white === username ? "white" : "black"
+        setIsWhite(playerColor === "white")
+        let opp = JSON.parse(data.data).white === username ? JSON.parse(data.data).black : JSON.parse(data.data).white
+        setOpponent(opp)
+        break
+
     }
   }
 
@@ -298,7 +301,12 @@ function App() {
 
   // join a room
   const handleJoinRoom = async (room) => {
-    sendJsonMessage({type: "joinRoom", data: {username: username, room: room}})
+    sendJsonMessage({type: "joinRoom", data: room})
+  }
+
+  // request list of rooms
+  const handleRequestRooms = async () => {
+    sendJsonMessage({type: "requestRooms", data: ""})
   }
 
   const handlePieceMove = async (from, to) => {
@@ -318,13 +326,34 @@ function App() {
 
         {!!errorMsg && <ErrorMsg content={errorMsg} />}
 
-        <div className='flex flex-col items-center justify-center'>
+        <GameBoard 
+          isWhite={isWhite}
+          board={board}
+          selectedSquare={selectedSquare} 
+          legalMoves={legalMoves}
+          setSelectedSquare={setSelectedSquare}
+          handlePieceMove={handlePieceMove}
+          setLegalMoves={setLegalMoves}
+        />
+
+        <div className="bg-stone-700 w-36 h-96 p-2">
+              <p className='text-white'>{username} v.s. {opponent}</p>
+        </div>
+
+      </div>
+    </main>
+  )
+}
+
+function GameBoard ({isWhite, board, selectedSquare, legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves}) {
+  return (
+    <div className='flex flex-col items-center justify-center'>
           <HorizontalLabel />
           <div className='flex flex-row'>
             <VerticalLabel />
             <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
               {
-                board.squares.map((square, index) => (
+                isWhite && board.squares.map((square, index) => (
               <SquareDisplay 
                 key={index} 
                 index={index} 
@@ -337,24 +366,31 @@ function App() {
                 setLegalMoves={setLegalMoves}
                   /> ))
               }
+              {
+                !isWhite && board.squares.slice().reverse().map((square, index) => (
+              <SquareDisplay
+                key={blackIndex(index)}
+                index={blackIndex(index)}
+                square={square}
+                board={board}
+                selectedSquare={selectedSquare}
+                legalMoves={legalMoves}
+                setSelectedSquare={setSelectedSquare}
+                handlePieceMove={handlePieceMove}
+                setLegalMoves={setLegalMoves}
+                  /> ))
+              }
             </div>
             <VerticalLabel />
           </div>
           <HorizontalLabel />
         </div>
-
-        <div className="bg-stone-700 w-36 h-96 p-2">
-              <p className='text-white'>{username} v.s. {opponent}</p>
-        </div>
-
-      </div>
-    </main>
   )
 }
 
 function ErrorMsg (props) {
   return (
-    <div className="bg-red-500 absolute left-2 top-2 w-96 h-8 flex flex-row items-center justify-center">
+    <div className="bg-red-500 z-30 absolute left-2 top-2 w-96 h-8 flex flex-row items-center justify-center">
       <p className="text-white font-mono font-thin text-sm">Error: {props.content}</p>
     </div>
   )
@@ -476,7 +512,8 @@ function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSel
   return (
     <div 
       onClick={handleOnClick} 
-      className={`aspect-square static ${(index===selectedSquare || (legalMoves.includes(index)) && <div className="aspect-square bg-green-500 opacity-50 static"></div>) ? 'bg-red-400' :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
+      className={`aspect-square relative ${(index===selectedSquare || (legalMoves.includes(index)) && <div className="aspect-square bg-green-500 opacity-50 static"></div>) ? 'bg-red-400' :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
+        <p className="absolute left-1 top-0 text-sm">{index}</p>
         {square.piece && <PieceDisplay piece={square.piece} />}
     </div>
   )
