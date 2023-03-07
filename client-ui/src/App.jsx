@@ -63,6 +63,20 @@ class Board {
     this.readFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')
   }
 
+  getBoardState() {
+    if (this.state == 1) {
+      return "white's turn"
+    } else if (this.state == 2) {
+      return "black's turn"
+    } else if (this.state == 3) {
+      return "white won"
+    } else if (this.state == 4) {
+      return "black won"
+    } else if (this.state == 5) {
+      return "draw"
+    }
+  }
+
   readFEN(fen) {
     // Clear the squares
     this.squares = []
@@ -107,19 +121,6 @@ class Board {
   movePiece(from, to) {
     this.squares[to].piece = this.squares[from].piece
     this.squares[from].piece = ""
-  }
-
-  // Ideally I dont want to use this function
-  // Instead TODO: request server for legal moves
-  async pieceLegalMoves(square) {
-    console.log(square)
-    // []string
-    let moves = await requestLegalMoves(square)
-    console.log(moves)
-    // []int
-    let moveIndices = moves.map(location => parseIndexSquare(location))
-    console.log(moveIndices)
-    return moveIndices
   }
 }
 
@@ -202,23 +203,6 @@ function parseIndexSquare(square) {
   return file + row * 8
 }
 
-// Request a list of legal moves from the server
-// TODO: Finish this part
-async function requestLegalMoves(index) {
-  let location = parseSquareIndex(index)
-  let possibleMoves = await postData("http://localhost:9988/valid_moves", {"piece": location})
-  console.log(possibleMoves)
-  return possibleMoves.validsquares.split(" ")
-}
-
-async function updateBoardState() {
-  let response = await postData("http://localhost:9988/state", {})
-  console.log(response)
-  return response.BoardState
-}
-
-
-
 function App() {
 
   const [board, setBoard] = useState(new Board())
@@ -228,7 +212,12 @@ function App() {
   const [isWhite, setIsWhite] = useState(true)
   const [username, setUsername] = useState('')
   const [opponent, setOpponent] = useState('')
+
   const [room, setRoom] = useState('')
+  const [roomStatus, setRoomStatus] = useState('')
+	// 1 - waiting for opponent
+	// 2 - game in progress
+	// 3 - game over
 
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -278,12 +267,19 @@ function App() {
         setRoom(data.data)
         break
       case "roomStatus":
+        // set room status
+        setRoom(JSON.parse(data.data).name)
+        setRoomStatus(JSON.parse(data.data).status)
+        // set player color
         let playerColor = JSON.parse(data.data).white === username ? "white" : "black"
         setIsWhite(playerColor === "white")
         let opp = JSON.parse(data.data).white === username ? JSON.parse(data.data).black : JSON.parse(data.data).white
         setOpponent(opp)
         break
-
+      case "legalMoves":
+        let moves = data.data === "" ? [] : data.data.split(',')
+        let moveIndices = moves.map(move => parseIndexSquare(move))
+        setLegalMoves(moveIndices)
     }
   }
 
@@ -309,10 +305,27 @@ function App() {
     sendJsonMessage({type: "requestRooms", data: ""})
   }
 
+  // request legal moves for a piece
+  const handleRequestLegalMoves = async (index) => {
+    // if the player is not in a game, do nothing
+    if (roomStatus !== 2) {
+      return
+    }
+    let location = parseSquareIndex(index)
+    sendJsonMessage({type: "requestLegalMoves", data: location})
+  }
+
   const handlePieceMove = async (from, to) => {
 
   }
 
+  // ping the server to stay connected
+  useEffect(() => {
+    const interval = setInterval(() => {
+      sendJsonMessage({type: "ping", data: ""})
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <main className='w-auto h-screen bg-stone-800'>
@@ -320,7 +333,7 @@ function App() {
       {!isConnected && <PopUp content="Connecting to the server..." />}
       {isConnected && !username && <UsernamePopUp handleUsernameChange={handleUsernameChange} />}
       {isConnected && username && !room && <RoomPopUp handleCreateRoom={handleCreateRoom} handleJoinRoom={handleJoinRoom} />}
-
+      {isConnected && username && room && roomStatus === 1 && <PopUp content={`Waiting for opponent...\n Room code: ${room}`} />}
 
       <div className='flex flex-row items-center justify-center h-full '>
 
@@ -328,16 +341,21 @@ function App() {
 
         <GameBoard 
           isWhite={isWhite}
+          roomStatus = {roomStatus}
           board={board}
           selectedSquare={selectedSquare} 
           legalMoves={legalMoves}
           setSelectedSquare={setSelectedSquare}
           handlePieceMove={handlePieceMove}
           setLegalMoves={setLegalMoves}
+          handleRequestLegalMoves={handleRequestLegalMoves}
         />
 
-        <div className="bg-stone-700 w-36 h-96 p-2">
+        <div className="bg-stone-700 w-36 h-96 p-2 text-sm">
               <p className='text-white'>{username} v.s. {opponent}</p>
+              <p className='text-white'>Piece: {isWhite ? "White" : "Black"}</p>
+              <p className='text-white'>Room: {room}</p>
+              <p className='text-white'>Status: {board.getBoardState()}</p>
         </div>
 
       </div>
@@ -345,7 +363,7 @@ function App() {
   )
 }
 
-function GameBoard ({isWhite, board, selectedSquare, legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves}) {
+function GameBoard ({isWhite, roomStatus, board, selectedSquare, legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves, handleRequestLegalMoves}) {
   return (
     <div className='flex flex-col items-center justify-center'>
           <HorizontalLabel />
@@ -355,6 +373,7 @@ function GameBoard ({isWhite, board, selectedSquare, legalMoves, setSelectedSqua
               {
                 isWhite && board.squares.map((square, index) => (
               <SquareDisplay 
+                isWhite={isWhite}
                 key={index} 
                 index={index} 
                 square={square}
@@ -364,11 +383,13 @@ function GameBoard ({isWhite, board, selectedSquare, legalMoves, setSelectedSqua
                 setSelectedSquare={setSelectedSquare}
                 handlePieceMove={handlePieceMove}
                 setLegalMoves={setLegalMoves}
+                handleRequestLegalMoves={handleRequestLegalMoves}
                   /> ))
               }
               {
                 !isWhite && board.squares.slice().reverse().map((square, index) => (
               <SquareDisplay
+                isWhite={isWhite}
                 key={blackIndex(index)}
                 index={blackIndex(index)}
                 square={square}
@@ -378,6 +399,7 @@ function GameBoard ({isWhite, board, selectedSquare, legalMoves, setSelectedSqua
                 setSelectedSquare={setSelectedSquare}
                 handlePieceMove={handlePieceMove}
                 setLegalMoves={setLegalMoves}
+                handleRequestLegalMoves={handleRequestLegalMoves}
                   /> ))
               }
             </div>
@@ -430,7 +452,7 @@ function PopUp ({content}) {
   return (
     <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
       <div className="w-60 h-28 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
-        <p className='my-auto'>{content}</p>
+        <p className='my-auto mx-2'>{content}</p>
       </div>
     </div>
   )
@@ -474,10 +496,10 @@ function RoomPopUp ({handleCreateRoom, handleJoinRoom}) {
   )
 }
 
-function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves}) {
+function SquareDisplay ({isWhite, index, square, board, selectedSquare,legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves, handleRequestLegalMoves}) {
 
   const handleOnClick = async () => {
-    console.log("clicked", index)
+    //console.log("clicked", index)
     setLegalMoves([])
 
     // if the square is already selected
@@ -487,26 +509,31 @@ function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSel
       return
     }
 
+    // if there is a piece on the square
+    // try to make move
     if (selectedSquare !== -1) {
-      // TODO: handle request from the server
       // check if legal move
       if (legalMoves.includes(index)){
         handlePieceMove(selectedSquare, index)
       } else {
         setSelectedSquare(-1)
       }
-      
       return
     }
     
     // if there is a piece on the square
     // set legal moves
     if (square.piece){
-      let moves = await board.pieceLegalMoves(index)
-      setLegalMoves(moves)
+      // if the piece is not the current player's piece
+      // do nothing
+      console.log("piece", square.piece)
+      if (square.piece.color === "white" && !isWhite) return
+      // if it is not the current player's turn
+      // do nothing
+      if (board.state === 1 && !isWhite) return
+      await handleRequestLegalMoves(index)
       setSelectedSquare(index)
     }
-    
   }
 
   return (

@@ -26,18 +26,25 @@ type Server struct {
 type Player struct {
 	conn *websocket.Conn
 	name string
+	room *Room
 }
 
 type Room struct {
 	name   string
-	status string
-	game   *Game
-	white  *Player
-	black  *Player
+	status int
+	// 1 - waiting for opponent
+	// 2 - game in progress
+	// 3 - game over
+	game  *Game
+	white *Player
+	black *Player
 }
 
 // Random string generator for room names
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+// pongWait is the maximum time in seconds to wait for a pong
+//const pongWait = 1 * time.Second
 
 func randSeq(n int) string {
 	b := make([]rune, n)
@@ -64,6 +71,9 @@ func (s *Server) reader(conn *websocket.Conn) {
 	}
 	s.addPlayer(player)
 
+	//conn.SetReadDeadline(time.Now().Add(pongWait))
+	//conn.SetPongHandler(func(string) error { conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
 		// read in a message
 		// we assume all mesaages are json
@@ -74,9 +84,8 @@ func (s *Server) reader(conn *websocket.Conn) {
 			log.Println(err)
 			return
 		}
-		// print out that message for clarity
-		go s.respond(player, p)
 
+		go s.respond(player, p)
 	}
 }
 
@@ -108,9 +117,13 @@ func (s *Server) respond(player *Player, message []byte) {
 		return
 	}
 
-	fmt.Println(clientMessage.Type, clientMessage.Data)
+	//fmt.Println(clientMessage.Type, clientMessage.Data)
 
 	switch clientMessage.Type {
+	// ping
+	case "ping":
+		// do nothing
+
 	case "registerUsername":
 		player.name = clientMessage.Data
 		fmt.Println("Registered username: ", player.name)
@@ -217,6 +230,79 @@ func (s *Server) respond(player *Player, message []byte) {
 			return
 		}
 
+	// request legal moves
+	case "requestLegalMoves":
+		// check if player is in a room
+		if player.room == nil {
+			fmt.Println("Player is not in a room")
+			return
+		}
+		// check if player is in a game
+		if player.room.game == nil {
+			fmt.Println("There is no game in this room")
+			return
+		}
+		// check if it is the player's turn
+		playerColor := -1
+		if player == player.room.white {
+			playerColor = 1
+		} else if player == player.room.black {
+			playerColor = 2
+		} else {
+			return
+		}
+		if playerColor != player.room.game.Board.State {
+			return
+		}
+
+		// get legal moves
+		// Check the location
+		isValid, location := GridToLocation(clientMessage.Data)
+		if isValid == false {
+			fmt.Println("Invalid location received from client")
+			return
+		}
+
+		// Check the piece
+		piece := player.room.game.Board.GetPieceAtLocation(location)
+		if piece.IsEmpty() == true {
+			fmt.Println("Empty piece received from client")
+			return
+		}
+		if piece.GetPlayer() != playerColor {
+			fmt.Println("Invalid piece received from client")
+			return
+		}
+
+		// Get the valid moves
+		moves := []Move{}
+		for _, move := range player.room.game.Board.GetPlayerLegalMoves(playerColor) {
+			if move.From == location {
+				moves = append(moves, move)
+			}
+		}
+
+		validSquare := []string{}
+		for _, move := range moves {
+			validSquare = append(validSquare, LocationToGrid(move.To))
+		}
+
+		// send legal moves back to client
+		serverMessage := &ServerMessage{
+			Type: "legalMoves",
+			Data: strings.Join(validSquare, ","),
+		}
+		serverMessageJSON, err := json.Marshal(serverMessage)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		err = player.conn.WriteMessage(websocket.TextMessage, serverMessageJSON)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
 	default:
 		fmt.Println("Unknown message type: ", clientMessage.Type)
 	}
@@ -238,14 +324,18 @@ func (s *Server) createRoom(player *Player) string {
 	// create a room
 	room := &Room{
 		name:   roomName,
-		status: "waiting",
+		status: 1, // 1 = waiting for players
 		game:   nil,
 		white:  player,
 		black:  nil,
 	}
+	player.room = room
 
 	// add room to the server
 	s.addRoom(room)
+
+	// broadcast room creation to all players
+	s.sendRoomStatus(room)
 
 	// return
 	return roomName
@@ -284,7 +374,7 @@ func createServer() {
 
 		fmt.Println("Client connected")
 
-		server.reader(ws)
+		go server.reader(ws)
 	})
 
 	log.Fatal(http.ListenAndServe(":8000", nil))
@@ -312,6 +402,8 @@ func (s *Server) disconnect(player *Player) {
 
 // remove player from the room
 func (s *Server) leaveRoom(room *Room, player *Player) {
+	player.room = nil
+
 	// remove player from the room
 	if room.white == player {
 		room.white = nil
@@ -323,12 +415,17 @@ func (s *Server) leaveRoom(room *Room, player *Player) {
 	// if the room is empty, delete it
 	if room.white == nil && room.black == nil {
 		delete(s.rooms, room.name)
+		return
 	}
 
 	// if the room is waiting for a player, change the status
 	if room.white == nil || room.black == nil {
-		room.status = "waiting"
+		room.status = 1 // 1 = waiting for players
+		fmt.Println("Player left room, waiting for players")
 	}
+
+	// send room status to the players
+	s.sendRoomStatus(room)
 }
 
 // join player to the room
@@ -336,31 +433,101 @@ func (s *Server) joinRoom(room *Room, player *Player) {
 	// join player to the room
 	if room.white == nil {
 		room.white = player
+		player.room = room
 	}
 	if room.black == nil {
 		room.black = player
+		player.room = room
 	}
 
 	// if the room is full, change the status
 	if room.white != nil && room.black != nil {
-		// send room status to the players
-		s.sendRoomStatus(room)
-		room.status = "playing"
+		// start the game
+		s.startGame(room)
 	}
 }
 
+// StartGame starts the game
+func (s *Server) startGame(room *Room) {
+
+	room.status = 2 // 2 = game in progress
+	// send room status to the players
+	s.sendRoomStatus(room)
+
+	// create a game
+	whitePlayerController := &RemotePlayer{}
+	blackPlayerController := &RemotePlayer{}
+	game := &Game{}
+	game.Init(whitePlayerController, blackPlayerController)
+	// init players
+	whitePlayerController.Init(1, &game.Board)
+	blackPlayerController.Init(2, &game.Board)
+
+	// add game to the room
+	room.game = game
+
+	// game loop
+	// TODO:
+	for {
+		fmt.Println("")
+		fmt.Println(game.Board.FullmoveNumber)
+		game.Print()
+
+		// send game state to the players
+		gameState := game.Board.Serialize()
+		room.white.conn.WriteJSON(&ClientMessage{
+			Type: "gameState",
+			Data: gameState,
+		})
+		room.black.conn.WriteJSON(&ClientMessage{
+			Type: "gameState",
+			Data: gameState,
+		})
+
+		isEnd := game.Play()
+		if isEnd {
+			break
+		}
+	}
+
+	// send game result to the players
+}
+
 type RoomStatus struct {
-	White string `json:"white"`
-	Black string `json:"black"`
+	Name   string `json:"name"`
+	Status int    `json:"status"`
+	White  string `json:"white"`
+	Black  string `json:"black"`
 }
 
 // send room status to the players
 func (s *Server) sendRoomStatus(room *Room) {
 	// send room status to the players
-	roomStatus := &RoomStatus{
-		White: room.white.name,
-		Black: room.black.name,
+	if room.black == nil && room.white == nil {
+		return
 	}
+
+	var blackPlayerName string
+	var whitePlayerName string
+
+	if room.black == nil {
+		blackPlayerName = ""
+	} else {
+		blackPlayerName = room.black.name
+	}
+	if room.white == nil {
+		whitePlayerName = ""
+	} else {
+		whitePlayerName = room.white.name
+	}
+
+	roomStatus := &RoomStatus{
+		Name:   room.name,
+		Status: room.status,
+		White:  whitePlayerName,
+		Black:  blackPlayerName,
+	}
+
 	roomStatusJSON, err := json.Marshal(roomStatus)
 	if err != nil {
 		log.Println(err)
