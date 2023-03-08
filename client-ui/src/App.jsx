@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
-<<<<<<< Updated upstream
-=======
 import useWebSocket from 'react-use-websocket'
 
 const WS_URL = 'wss://172.105.148.109:8000/ws';
 //const WS_URL = 'ws://localhost:8000/ws'
 //https://gochess-aber2fx4bq-ue.a.run.app
->>>>>>> Stashed changes
+
 
 // piece png
 import blackPawn from './assets/black_pawn.png'
@@ -22,6 +20,9 @@ import whiteBishop from './assets/white_bishop.png'
 import whiteQueen from './assets/white_queen.png'
 import whiteKing from './assets/white_king.png'
 
+// help icon
+import helpIcon from './assets/help-icon.svg'
+
 // Square direction constants
 const UP = -8
 const DOWN = 8
@@ -32,24 +33,9 @@ const UP_RIGHT = UP + RIGHT
 const DOWN_LEFT = DOWN + LEFT
 const DOWN_RIGHT = DOWN + RIGHT
 
-// Post function
-// From: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-async function postData(url = "", data = {}) {
-  // Default options are marked with *
-  const response = await fetch(url, {
-    method: "POST", // *GET, POST, PUT, DELETE, etc.
-    mode: "cors", // no-cors, *cors, same-origin
-    cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
-    credentials: "same-origin", // include, *same-origin, omit
-    headers: {
-      "Content-Type": "application/json",
-      // 'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    redirect: "follow", // manual, *follow, error
-    referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-    body: JSON.stringify(data), // body data type must match "Content-Type" header
-  });
-  return response.json(); // parses JSON response into native JavaScript objects
+// cauculate the correct index when play black
+function blackIndex(index) {
+  return 63 - index
 }
 
 // information about a board square
@@ -81,6 +67,20 @@ class Board {
 	  // 5 - draw
     this.state = 1
     this.readFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')
+  }
+
+  getBoardState() {
+    if (this.state == 1) {
+      return "white's turn"
+    } else if (this.state == 2) {
+      return "black's turn"
+    } else if (this.state == 3) {
+      return "white won"
+    } else if (this.state == 4) {
+      return "black won"
+    } else if (this.state == 5) {
+      return "draw"
+    }
   }
 
   readFEN(fen) {
@@ -127,19 +127,6 @@ class Board {
   movePiece(from, to) {
     this.squares[to].piece = this.squares[from].piece
     this.squares[from].piece = ""
-  }
-
-  // Ideally I dont want to use this function
-  // Instead TODO: request server for legal moves
-  async pieceLegalMoves(square) {
-    console.log(square)
-    // []string
-    let moves = await requestLegalMoves(square)
-    console.log(moves)
-    // []int
-    let moveIndices = moves.map(location => parseIndexSquare(location))
-    console.log(moveIndices)
-    return moveIndices
   }
 }
 
@@ -222,124 +209,238 @@ function parseIndexSquare(square) {
   return file + row * 8
 }
 
-// Request a list of legal moves from the server
-// TODO: Finish this part
-async function requestLegalMoves(index) {
-  let location = parseSquareIndex(index)
-  let possibleMoves = await postData("http://localhost:9988/valid_moves", {"piece": location})
-  console.log(possibleMoves)
-  return possibleMoves.validsquares.split(" ")
-}
-
-async function updateBoardState() {
-  let response = await postData("http://localhost:9988/state", {})
-  console.log(response)
-  return response.BoardState
-}
-
 function App() {
 
   const [board, setBoard] = useState(new Board())
   const [selectedSquare, setSelectedSquare] = useState(-1)
-
   const [legalMoves, setLegalMoves] = useState([])
 
-  const [player, setPlayer] = useState('')
+  const [isWhite, setIsWhite] = useState(true)
+  const [username, setUsername] = useState('')
+  const [opponent, setOpponent] = useState('')
 
-  const handlePieceMove = async (from, to) => {
-    let move = parseSquareIndex(from) + parseSquareIndex(to)
-    let response = await postData("http://localhost:9988/move", {"move": move})
-    console.log(response)
-    updateBoardState().then((boardState) => {
-      setBoard(parseBoardState(boardState))
-    })
+  const [room, setRoom] = useState('')
+  const [roomStatus, setRoomStatus] = useState('')
+	// 1 - waiting for opponent
+	// 2 - game in progress
+	// 3 - game over
+
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const [isConnected, setIsConnected] = useState(false)
+
+  // about popup
+  const [showAbout, setShowAbout] = useState(false)
+
+  // reset state
+  const resetState = () => {
+    setBoard(new Board())
     setSelectedSquare(-1)
+    setLegalMoves([])
+    setIsWhite(true)
+    setOpponent('')
+    setRoom('')
+    setRoomStatus('')
+    setErrorMsg('')
   }
 
-  // Register to the server
-  // and get the board state
+  const {
+    sendMessage,
+    sendJsonMessage,
+    lastMessage,
+    lastJsonMessage,
+    readyState,
+    getWebSocket
+  } = useWebSocket(WS_URL, {
+    onOpen: () => {
+      setIsConnected(true) 
+      console.log('WebSocket connection established.');
+    },
+    onMessage: (event) => {
+      //console.log(event)
+      handleIncomingMessage(event.data)
+    },
+    onError: (event) => {
+      console.log(event)
+    },
+    onClose: () => {
+      setIsConnected(false)
+      console.log('WebSocket connection closed.');
+    },
+  });
+
+  // handle incoming messages
+  const handleIncomingMessage = (message) => {
+    console.log(message)
+    let data = JSON.parse(message)
+
+    // Check error message
+    if (data.error) {
+      setErrorMsg(data.error)
+      return
+    }
+
+    let boardState;
+
+    switch (data.type) {
+      case "roomCreated":
+        setRoom(data.data)
+        break
+      case "roomJoined":
+        //setRoom(data.data)
+        break
+      case "roomStatus":
+
+        // if the room status is complete
+        // do nothing
+        if (roomStatus === 3) {
+          return
+        }
+
+        let roomInfo = JSON.parse(data.data)
+        // if it is empty string, reinitialize the all the states
+        if (roomInfo.name === "") {
+          setRoom("")
+          setRoomStatus("")
+          setIsWhite(true)
+          setOpponent("")
+          setBoard(new Board())
+          setSelectedSquare(-1)
+          setLegalMoves([])
+          return
+        }
+
+        // set room status
+        setRoom(roomInfo.name)
+        setRoomStatus(roomInfo.status)
+        // set player color
+        let playerColor = roomInfo.white === username ? "white" : "black"
+        setIsWhite(playerColor === "white")
+        let opp = roomInfo.white === username ? roomInfo.black : roomInfo.white
+        setOpponent(opp)
+        break
+      case "legalMoves":
+        let moves = data.data === "" ? [] : data.data.split(',')
+        let moveIndices = moves.map(move => parseIndexSquare(move))
+        setLegalMoves(moveIndices)
+        break
+
+      case "gameState":
+        boardState = parseBoardState(data.data)
+        setBoard(boardState)
+        break
+
+      case "gameResult":
+        // This means the game is over
+        setRoomStatus(3)
+        boardState = parseBoardState(data.data)
+        setBoard(boardState)
+        break
+    }
+  }
+
+  // handle username change and register to the server
+  const handleUsernameChange = async (username) => {
+    setUsername(username)
+    sendJsonMessage({type: "registerUsername", data: username})
+  }
+
+  // create a new room
+  const handleCreateRoom = async () => {
+    console.log("create room")
+    sendJsonMessage({type: "createRoom", data: ""})
+  }
+
+  // join a room
+  const handleJoinRoom = async (room) => {
+    console.log("send join room request")
+    sendJsonMessage({type: "joinRoom", data: room})
+  }
+
+  // request list of rooms
+  const handleRequestRooms = async () => {
+    sendJsonMessage({type: "requestRooms", data: ""})
+  }
+
+  // request legal moves for a piece
+  const handleRequestLegalMoves = async (index) => {
+    // if the player is not in a game, do nothing
+    if (roomStatus !== 2) {
+      return
+    }
+    let location = parseSquareIndex(index)
+    sendJsonMessage({type: "requestLegalMoves", data: location})
+  }
+
+  const handlePieceMove = async (from, to) => {
+    let fromSquare = parseSquareIndex(from)
+    let toSquare = parseSquareIndex(to)
+    sendJsonMessage({type: "movePiece", data: fromSquare + "," + toSquare})
+  }
+
+  // ping the server to stay connected
   useEffect(() => {
-    // Initialization
-    fetch('http://localhost:9988/init', {// Adding method type
-      method: "POST",
-      body: JSON.stringify({uid: '1234'}),
-      headers: {"Content-type": "application/json; charset=UTF-8"}
-    }).
-    then((response) => {
-      return response.json()
-    })
-    .then((data) => {
-      console.log(data)
-      if (data.color === 1) {
-        setPlayer('white')
-      } else {
-        setPlayer('black')
-      }
-    }).catch((error) => {
-      console.log(error)
-      setPlayer('')
-    })
-
-    // get the board state every 1 second
     const interval = setInterval(() => {
-      // If not registered, try to register again
-      if (player === '') {
-        fetch('http://localhost:9988/init', {// Adding method type
-        method: "POST",
-        body: JSON.stringify({
-            uid: '1234'
-        }),
-        headers: {"Content-type": "application/json; charset=UTF-8"}
-      })
-        .then((response) => {
-          return response.json()
-        })
-        .then((data) => {
-          //console.log(data)
-          if (data.color === 1) {
-            setPlayer('white')
-          } else {
-            setPlayer('black')
-          }
-        }).catch((error) => {
-          console.log(error)
-          setPlayer('')
-        })
-      }
-
-      fetch('http://localhost:9988/state', {uid: '1234'})
-      .then((response) => {
-        return response.json()
-      })
-      .then((data) => {
-        //console.log(data)
-        setBoard(parseBoardState(data.BoardState))
-      }).catch((error) => {
-        console.log(error)
-        setPlayer('')
-      })
-    }, 1000)
-
-    // Clear the interval when the component unmounts
-    return () => clearInterval(interval)
-
-  },[])
-
+      sendJsonMessage({type: "ping", data: ""})
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <main className='w-auto h-screen bg-stone-800'>
 
-      {player==="" && <PopUp content="Connecting to the server..." />}
+      <button className='absolute top-2 left-2 z-50 font-bold bg-stone-600 text-stone-200 p-2 text-sm shadow-lg rounded' onClick={() => setShowAbout(true)}>
+        About this project
+      </button>
 
-      <div className='flex flex-col items-center justify-center h-full '>
+      {showAbout && <AboutPopup setShowAbout={setShowAbout}/>}
 
-        <HorizontalLabel />
-        <div className='flex flex-row'>
-          <VerticalLabel />
-          <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
-            {
-              board.squares.map((square, index) => (
+      {!isConnected && <PopUp content="Connecting to the server..." />}
+      {isConnected && !username && <UsernamePopUp handleUsernameChange={handleUsernameChange} />}
+      {isConnected && username && !room && <RoomPopUp handleCreateRoom={handleCreateRoom} handleJoinRoom={handleJoinRoom} />}
+      {isConnected && username && room && roomStatus === 1 && <PopUp content={`Waiting for opponent...\n Room code: ${room}`} />}
+
+      {isConnected && username && room && roomStatus === 3 && <GameOverPopUp board={board} resetState={resetState} />}
+
+      <div className='flex flex-row items-center justify-center h-full '>
+
+        {!!errorMsg && <ErrorMsg content={errorMsg} />}
+
+        <GameBoard 
+          isWhite={isWhite}
+          roomStatus = {roomStatus}
+          board={board}
+          selectedSquare={selectedSquare} 
+          legalMoves={legalMoves}
+          setSelectedSquare={setSelectedSquare}
+          handlePieceMove={handlePieceMove}
+          setLegalMoves={setLegalMoves}
+          handleRequestLegalMoves={handleRequestLegalMoves}
+        />
+
+        <div className="bg-stone-700 w-36 h-96 p-2 text-sm">
+              <p className='text-white'>{username} v.s. {opponent}</p>
+              <p className='text-white'>Piece: {isWhite ? "White" : "Black"}</p>
+              <p className='text-white'>Room: {room}</p>
+              <p className='text-white'>Status: {board.getBoardState()}</p>
+        </div>
+
+      </div>
+    </main>
+  )
+}
+
+function GameBoard ({isWhite, roomStatus, board, selectedSquare, legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves, handleRequestLegalMoves}) {
+  return (
+    <div className='flex flex-col items-center justify-center'>
+          <HorizontalLabel />
+          <div className='flex flex-row'>
+            <VerticalLabel />
+            <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
+              {
+                isWhite && board.squares.map((square, index) => (
               <SquareDisplay 
+                isWhite={isWhite}
                 key={index} 
                 index={index} 
                 square={square}
@@ -349,15 +450,38 @@ function App() {
                 setSelectedSquare={setSelectedSquare}
                 handlePieceMove={handlePieceMove}
                 setLegalMoves={setLegalMoves}
-                /> ))
-            }
+                handleRequestLegalMoves={handleRequestLegalMoves}
+                  /> ))
+              }
+              {
+                !isWhite && board.squares.slice().reverse().map((square, index) => (
+              <SquareDisplay
+                isWhite={isWhite}
+                key={blackIndex(index)}
+                index={blackIndex(index)}
+                square={square}
+                board={board}
+                selectedSquare={selectedSquare}
+                legalMoves={legalMoves}
+                setSelectedSquare={setSelectedSquare}
+                handlePieceMove={handlePieceMove}
+                setLegalMoves={setLegalMoves}
+                handleRequestLegalMoves={handleRequestLegalMoves}
+                  /> ))
+              }
+            </div>
+            <VerticalLabel />
           </div>
-          <VerticalLabel />
+          <HorizontalLabel />
         </div>
-        <HorizontalLabel />
+  )
+}
 
-      </div>
-    </main>
+function ErrorMsg (props) {
+  return (
+    <div className="bg-red-500 z-30 absolute left-2 top-2 w-96 h-8 flex flex-row items-center justify-center">
+      <p className="text-white font-mono font-thin text-sm">Error: {props.content}</p>
+    </div>
   )
 }
 
@@ -395,49 +519,105 @@ function PopUp ({content}) {
   return (
     <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
       <div className="w-60 h-28 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
-        <p className='my-auto'>{content}</p>
+        <p className='my-auto mx-2'>{content}</p>
       </div>
     </div>
   )
 }
 
-function SquareDisplay ({index, square, board, selectedSquare,legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves}) {
+function UsernamePopUp ({handleUsernameChange}) {
+  const [usernameInput, setUsernameInput] = useState('')
+  
+
+  return (
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
+      <div className="w-60 p-5 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
+        <p className='my-4'>Enter your username:</p>
+        <input className="w-full px-2 h-8 mb-2 rounded-md border-2" type="text" onChange={(e) => setUsernameInput(e.target.value)} />
+        <button className="w-full h-8 rounded-md bg-stone-800 my-4 text-white" onClick={() => handleUsernameChange(usernameInput)}>Submit</button>
+      </div>
+    </div>
+  )
+}
+
+function GameOverPopUp ({board, resetState}) {
+  const result = board.state === 2 ? 'White Wins!' : board.state === 3 ? 'Black Wins!' : 'Draw!'
+  return (
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
+      <div className="w-60 p-5 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
+        <p className='my-4'>{result}</p>
+        <button className="w-full h-8 rounded-md bg-stone-800 my-4 text-white" onClick={resetState}>Play Again</button>
+      </div>
+    </div>
+  )
+}
+
+function RoomPopUp ({handleCreateRoom, handleJoinRoom}) {
+  const [roomInput, setRoomInput] = useState('')
+
+  return (
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
+      <div className="w-60 p-2 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start divide-y-2">
+        <div className='w-full'>
+          <p className='mt-2'>Create a room?</p>
+          <button className="w-full p-2 rounded-md bg-stone-800 my-4 text-white" onClick={handleCreateRoom}>Create</button>
+        </div>
+        
+        <div>
+          <p className='my-4'>Or join a room:</p>
+          <div className="w-full mb-2 flex flex-row items-center justify-center">
+            <input className="w-full p-2  rounded-md border-2" type="text" onChange={(e) => setRoomInput(e.target.value)}/>
+            <button className="p-2 rounded-md bg-stone-800  text-white" onClick={() => handleJoinRoom(roomInput)}>Join</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SquareDisplay ({isWhite, index, square, board, selectedSquare,legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves, handleRequestLegalMoves}) {
 
   const handleOnClick = async () => {
-    console.log("clicked", index)
+    //console.log("clicked", index)
     setLegalMoves([])
 
+    // if the square is already selected
+    // cancel selection
     if (selectedSquare === index) {
       setSelectedSquare(-1)
       return
     }
 
+    // if there is a piece on the square
+    // try to make move
     if (selectedSquare !== -1) {
-      // TODO: handle request from the server
       // check if legal move
       if (legalMoves.includes(index)){
         handlePieceMove(selectedSquare, index)
-      } else {
-        setSelectedSquare(-1)
       }
-      
+      setSelectedSquare(-1)
       return
     }
     
     // if there is a piece on the square
     // set legal moves
     if (square.piece){
-      let moves = await board.pieceLegalMoves(index)
-      setLegalMoves(moves)
+      // if the piece is not the current player's piece
+      // do nothing
+      console.log("piece", square.piece)
+      if (square.piece.color === "white" && !isWhite) return
+      // if it is not the current player's turn
+      // do nothing
+      if (board.state === 1 && !isWhite) return
+      await handleRequestLegalMoves(index)
       setSelectedSquare(index)
     }
-    
   }
 
   return (
     <div 
       onClick={handleOnClick} 
-      className={`aspect-square static ${(index===selectedSquare || (legalMoves.includes(index)) && <div className="aspect-square bg-green-500 opacity-50 static"></div>) ? 'bg-red-400' :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
+      className={`aspect-square relative ${(index===selectedSquare || (legalMoves.includes(index)) && <div className="aspect-square bg-green-500 opacity-50 static"></div>) ? 'bg-red-400' :square.color ? 'bg-stone-300' : 'bg-stone-500'}`}>
         {square.piece && <PieceDisplay piece={square.piece} />}
     </div>
   )
@@ -469,6 +649,20 @@ function PieceDisplay ({piece}) {
         }}
         />
         
+    </div>
+  )
+}
+
+function AboutPopup({setShowAbout}) {
+  return(
+    <div  className="absolute flex flex-col items-center justify-center z-50 w-screen h-screen backdrop-blur-sm bg-stone-900/50 text-white text-sm">
+      <div className="max-w-xl p-5 bg-stone-600 shadow-md rounded-md flex flex-col">
+        <p className='my-2'>About GoChess:</p>
+        <p className='my-2'>GoChess is a chess game built with Go and React. I'm still testing the server! Feel free to raise any issues on Github: <a className="underline"href="https://github.com/zikunw/GoChess">https://github.com/zikunw/GoChess</a></p>
+        <p className='my-2'><a className="underline underline-offset-2 font-bold shadow-none hover:shadow-2xl" href="https://www.zikunw.com">Learn more about what I do here!</a></p>
+        <p className='my-2'>© 2023 Zikun Wang. All rights reserved.</p>
+        <button className='my-2 underline border py-2 border-white rounded-lg' onClick={()=>setShowAbout(false)}>Back</button>
+      </div>
     </div>
   )
 }

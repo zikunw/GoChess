@@ -23,7 +23,9 @@ func main() {
 	// }
 	// game.Print()
 
-	test()
+	//test()
+
+	createServer()
 
 }
 

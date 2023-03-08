@@ -22,4 +22,6 @@ fen/state/halfmove/fullmove/wqcastle/wkcastle/bqcastle/bkcastle
 
 &{POST /valid_moves HTTP/1.1 1 1 map[Accept:[*/*] Content-Length:[11] Content-Type:[application/x-www-form-urlencoded] User-Agent:[curl/7.79.1]] 0x1400002a4c0 <nil> 11 [] false localhost:9988 map[] map[] <nil> map[] 127.0.0.1:62582 /valid_moves <nil> <nil> <nil> 0x1400002a500}
 
-
+Docker:
+1. env GOOS=linux GOARCH=amd64 go build -o ./app/main ./main
+2. docker build -t zikunw/gochess:1.0 .
