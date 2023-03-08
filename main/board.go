@@ -303,7 +303,6 @@ func (b *Board) GetPlayerMovesExceptKing(player int) []Move {
 
 // Get all the legal moves for the given player.
 // This function uses GetPlayerMoves() and filters out moves that put the player in check.
-// TODO: HUGE bug here
 func (b *Board) GetPlayerLegalMoves(player int) []Move {
 	moves := b.GetPlayerMoves(player)
 	legalMoves := make([]Move, 0)
@@ -371,6 +370,13 @@ func (b *Board) CheckPlayerInCheck(player int) bool {
 func (b *Board) MakeMove(m Move) {
 
 	player := b.Locations[m.From.X][m.From.Y].GetPlayer()
+
+	// Change board state
+	if player == 1 {
+		b.State = 2
+	} else {
+		b.State = 1
+	}
 
 	// Update the board state
 	b.LastMove = m

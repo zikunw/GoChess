@@ -16,6 +16,7 @@ import (
 
 type PlayerController interface {
 	GetMove(*Board) Move
+	SendMove(move Move)
 }
 
 type HumanPlayer struct {
