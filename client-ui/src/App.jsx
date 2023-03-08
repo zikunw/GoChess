@@ -17,6 +17,9 @@ import whiteBishop from './assets/white_bishop.png'
 import whiteQueen from './assets/white_queen.png'
 import whiteKing from './assets/white_king.png'
 
+// help icon
+import helpIcon from './assets/help-icon.svg'
+
 // Square direction constants
 const UP = -8
 const DOWN = 8
@@ -223,6 +226,9 @@ function App() {
 
   const [isConnected, setIsConnected] = useState(false)
 
+  // about popup
+  const [showAbout, setShowAbout] = useState(false)
+
   const {
     sendMessage,
     sendJsonMessage,
@@ -352,6 +358,13 @@ function App() {
 
   return (
     <main className='w-auto h-screen bg-stone-800'>
+
+      <button className='absolute top-2 left-2 bg-white z-50' onClick={() => setShowAbout(true)}>
+        <svg className='w-8 h-8 text-stone-200' fill="currentColor" viewBox="0 0 20 20" xmlns={helpIcon}>
+        </svg>
+      </button>
+
+      {showAbout && <AboutPopup setShowAbout={setShowAbout}/>}
 
       {!isConnected && <PopUp content="Connecting to the server..." />}
       {isConnected && !username && <UsernamePopUp handleUsernameChange={handleUsernameChange} />}
@@ -593,6 +606,19 @@ function PieceDisplay ({piece}) {
         }}
         />
         
+    </div>
+  )
+}
+
+function AboutPopup({setShowAbout}) {
+  return(
+    <div  className="absolute flex flex-col items-center justify-center z-50 w-screen h-screen backdrop-blur-sm bg-stone-900/50 text-white text-sm">
+      <div className="max-w-xl p-5 bg-stone-600 shadow-md rounded-md flex flex-col">
+        <p className='my-2'>About GoChess:</p>
+        <p className='my-2'>GoChess is a chess game built with Go and React. I'm still testing the server! Feel free to raise any issues on Github: https://github.com/zikunw/GoChess</p>
+        <p className='my-2'>© 2023 Zikun Wang. All rights reserved.</p>
+        <button className='my-2 underline border py-2 border-white rounded-lg' onClick={()=>setShowAbout(false)}>Back</button>
+      </div>
     </div>
   )
 }
