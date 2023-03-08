@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import useWebSocket from 'react-use-websocket'
 
-const WS_URL = 'ws://127.0.0.1:8000/ws';
+const WS_URL = 'ws://172.105.148.109:8000/ws';
+//const WS_URL = 'ws://localhost:8000/ws'
+//https://gochess-aber2fx4bq-ue.a.run.app
 
 // piece png
 import blackPawn from './assets/black_pawn.png'
@@ -229,6 +231,18 @@ function App() {
   // about popup
   const [showAbout, setShowAbout] = useState(false)
 
+  // reset state
+  const resetState = () => {
+    setBoard(new Board())
+    setSelectedSquare(-1)
+    setLegalMoves([])
+    setIsWhite(true)
+    setOpponent('')
+    setRoom('')
+    setRoomStatus('')
+    setErrorMsg('')
+  }
+
   const {
     sendMessage,
     sendJsonMessage,
@@ -242,7 +256,7 @@ function App() {
       console.log('WebSocket connection established.');
     },
     onMessage: (event) => {
-      console.log(event)
+      //console.log(event)
       handleIncomingMessage(event.data)
     },
     onError: (event) => {
@@ -265,14 +279,23 @@ function App() {
       return
     }
 
+    let boardState;
+
     switch (data.type) {
       case "roomCreated":
         setRoom(data.data)
         break
       case "roomJoined":
-        setRoom(data.data)
+        //setRoom(data.data)
         break
       case "roomStatus":
+
+        // if the room status is complete
+        // do nothing
+        if (roomStatus === 3) {
+          return
+        }
+
         let roomInfo = JSON.parse(data.data)
         // if it is empty string, reinitialize the all the states
         if (roomInfo.name === "") {
@@ -302,11 +325,16 @@ function App() {
         break
 
       case "gameState":
-        let boardState = parseBoardState(data.data)
+        boardState = parseBoardState(data.data)
         setBoard(boardState)
         break
 
-      
+      case "gameResult":
+        // This means the game is over
+        setRoomStatus(3)
+        boardState = parseBoardState(data.data)
+        setBoard(boardState)
+        break
     }
   }
 
@@ -324,6 +352,7 @@ function App() {
 
   // join a room
   const handleJoinRoom = async (room) => {
+    console.log("send join room request")
     sendJsonMessage({type: "joinRoom", data: room})
   }
 
@@ -359,9 +388,8 @@ function App() {
   return (
     <main className='w-auto h-screen bg-stone-800'>
 
-      <button className='absolute top-2 left-2 bg-white z-50' onClick={() => setShowAbout(true)}>
-        <svg className='w-8 h-8 text-stone-200' fill="currentColor" viewBox="0 0 20 20" xmlns={helpIcon}>
-        </svg>
+      <button className='absolute top-2 left-2 z-50 font-bold bg-stone-600 text-stone-200 p-2 text-sm shadow-lg rounded' onClick={() => setShowAbout(true)}>
+        About this project
       </button>
 
       {showAbout && <AboutPopup setShowAbout={setShowAbout}/>}
@@ -370,6 +398,8 @@ function App() {
       {isConnected && !username && <UsernamePopUp handleUsernameChange={handleUsernameChange} />}
       {isConnected && username && !room && <RoomPopUp handleCreateRoom={handleCreateRoom} handleJoinRoom={handleJoinRoom} />}
       {isConnected && username && room && roomStatus === 1 && <PopUp content={`Waiting for opponent...\n Room code: ${room}`} />}
+
+      {isConnected && username && room && roomStatus === 3 && <GameOverPopUp board={board} resetState={resetState} />}
 
       <div className='flex flex-row items-center justify-center h-full '>
 
@@ -509,6 +539,18 @@ function UsernamePopUp ({handleUsernameChange}) {
   )
 }
 
+function GameOverPopUp ({board, resetState}) {
+  const result = board.state === 2 ? 'White Wins!' : board.state === 3 ? 'Black Wins!' : 'Draw!'
+  return (
+    <div className="absolute flex flex-col items-center justify-center z-10 w-screen h-screen backdrop-blur-sm bg-stone-900/50">
+      <div className="w-60 p-5 bg-slate-50 shadow-md rounded-md flex flex-col items-center justify-start">
+        <p className='my-4'>{result}</p>
+        <button className="w-full h-8 rounded-md bg-stone-800 my-4 text-white" onClick={resetState}>Play Again</button>
+      </div>
+    </div>
+  )
+}
+
 function RoomPopUp ({handleCreateRoom, handleJoinRoom}) {
   const [roomInput, setRoomInput] = useState('')
 
@@ -615,7 +657,8 @@ function AboutPopup({setShowAbout}) {
     <div  className="absolute flex flex-col items-center justify-center z-50 w-screen h-screen backdrop-blur-sm bg-stone-900/50 text-white text-sm">
       <div className="max-w-xl p-5 bg-stone-600 shadow-md rounded-md flex flex-col">
         <p className='my-2'>About GoChess:</p>
-        <p className='my-2'>GoChess is a chess game built with Go and React. I'm still testing the server! Feel free to raise any issues on Github: https://github.com/zikunw/GoChess</p>
+        <p className='my-2'>GoChess is a chess game built with Go and React. I'm still testing the server! Feel free to raise any issues on Github: <a className="underline"href="https://github.com/zikunw/GoChess">https://github.com/zikunw/GoChess</a></p>
+        <p className='my-2'><a className="underline underline-offset-2 font-bold shadow-none hover:shadow-2xl" href="https://www.zikunw.com">Learn more about what I do here!</a></p>
         <p className='my-2'>© 2023 Zikun Wang. All rights reserved.</p>
         <button className='my-2 underline border py-2 border-white rounded-lg' onClick={()=>setShowAbout(false)}>Back</button>
       </div>

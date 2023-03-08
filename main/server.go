@@ -434,6 +434,8 @@ func createServer() {
 		go server.reader(ws)
 	})
 
+	fmt.Println("Server started on port 8000")
+
 	log.Fatal(http.ListenAndServe(":8000", nil))
 
 }
@@ -450,9 +452,11 @@ func (s *Server) disconnect(player *Player) {
 	for _, room := range s.rooms {
 		if room.white == player {
 			s.leaveRoom(room, player)
+			s.sendRoomStatus(room)
 		}
 		if room.black == player {
 			s.leaveRoom(room, player)
+			s.sendRoomStatus(room)
 		}
 	}
 }
@@ -480,9 +484,6 @@ func (s *Server) leaveRoom(room *Room, player *Player) {
 		room.status = 1 // 1 = waiting for players
 		fmt.Println("Player left room, waiting for players")
 	}
-
-	// send room status to the players
-	s.sendRoomStatus(room)
 }
 
 // join player to the room
@@ -500,7 +501,7 @@ func (s *Server) joinRoom(room *Room, player *Player) {
 	// if the room is full, change the status
 	if room.white != nil && room.black != nil {
 		// start the game
-		s.startGame(room)
+		go s.startGame(room)
 	}
 }
 
@@ -524,11 +525,10 @@ func (s *Server) startGame(room *Room) {
 	room.game = game
 
 	// game loop
-	// TODO:
 	for {
-		fmt.Println("")
-		fmt.Println(game.Board.FullmoveNumber)
-		game.Print()
+		//fmt.Println("")
+		//fmt.Println(game.Board.FullmoveNumber)
+		//game.Print()
 
 		// send game state to the players
 		gameState := game.Board.Serialize()
@@ -547,7 +547,22 @@ func (s *Server) startGame(room *Room) {
 		}
 	}
 
+	// update room status
+	room.status = 3 // 3 = game ended
+
 	// send game result to the players
+	room.white.conn.WriteJSON(&ClientMessage{
+		Type: "gameResult",
+		Data: game.Board.Serialize(),
+	})
+	room.black.conn.WriteJSON(&ClientMessage{
+		Type: "gameResult",
+		Data: game.Board.Serialize(),
+	})
+
+	// Kick players from the room
+	s.leaveRoom(room, room.white)
+	s.leaveRoom(room, room.black)
 }
 
 type RoomStatus struct {
