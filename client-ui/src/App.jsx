@@ -657,7 +657,7 @@ function AboutPopup({setShowAbout}) {
   return(
     <div  className="absolute flex flex-col items-center justify-center z-50 w-screen h-screen backdrop-blur-sm bg-stone-900/50 text-white text-sm">
       <div className="max-w-xl p-5 bg-stone-600 shadow-md rounded-md flex flex-col">
-        <p className='my-2'>About GoChess:</p>
+        <p className='my-2'>About GoChess (v0.1):</p>
         <p className='my-2'>GoChess is a chess game built with Go and React. I'm still testing the server! Feel free to raise any issues on Github: <a className="underline"href="https://github.com/zikunw/GoChess">https://github.com/zikunw/GoChess</a></p>
         <p className='my-2'><a className="underline underline-offset-2 font-bold shadow-none hover:shadow-2xl" href="https://www.zikunw.com">Learn more about what I do here!</a></p>
         <p className='my-2'>© 2023 Zikun Wang. All rights reserved.</p>
