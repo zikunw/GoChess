@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import useWebSocket from 'react-use-websocket'
 
-const WS_URL = 'wss://172.105.148.109:8000/ws';
+const WS_URL = 'wss://gochess.app:8000/ws';
 //const WS_URL = 'ws://localhost:8000/ws'
 //https://gochess-aber2fx4bq-ue.a.run.app
 

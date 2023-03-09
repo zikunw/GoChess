@@ -436,8 +436,11 @@ func createServer() {
 
 	fmt.Println("Server started on port 8000")
 
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	// Serve using TLS
+	log.Fatal(http.ListenAndServeTLS(":8000", "bundle.crt", "private.key", nil))
 
+	// Serve without TLS
+	//log.Fatal(http.ListenAndServe(":8000", nil))
 }
 
 // Disconnect removes the player from the server
