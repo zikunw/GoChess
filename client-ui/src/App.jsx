@@ -394,15 +394,13 @@ function App() {
       </button>
 
       {showAbout && <AboutPopup setShowAbout={setShowAbout}/>}
-
       {!isConnected && <PopUp content="Connecting to the server..." />}
       {isConnected && !username && <UsernamePopUp handleUsernameChange={handleUsernameChange} />}
       {isConnected && username && !room && <RoomPopUp handleCreateRoom={handleCreateRoom} handleJoinRoom={handleJoinRoom} />}
       {isConnected && username && room && roomStatus === 1 && <PopUp content={`Waiting for opponent...\n Room code: ${room}`} />}
-
       {isConnected && username && room && roomStatus === 3 && <GameOverPopUp board={board} resetState={resetState} />}
 
-      <div className='flex flex-row items-center justify-center h-full '>
+      <div className='flex flex-col sm:flex-row items-center justify-center h-full '>
 
         {!!errorMsg && <ErrorMsg content={errorMsg} />}
 
@@ -418,7 +416,7 @@ function App() {
           handleRequestLegalMoves={handleRequestLegalMoves}
         />
 
-        <div className="bg-stone-700 w-36 h-96 p-2 text-sm">
+        <div className="bg-stone-700 w-full sm:w-32 p-2 text-sm">
               <p className='text-white'>{username} v.s. {opponent}</p>
               <p className='text-white'>Piece: {isWhite ? "White" : "Black"}</p>
               <p className='text-white'>Room: {room}</p>
@@ -432,47 +430,49 @@ function App() {
 
 function GameBoard ({isWhite, roomStatus, board, selectedSquare, legalMoves, setSelectedSquare, handlePieceMove, setLegalMoves, handleRequestLegalMoves}) {
   return (
-    <div className='flex flex-col items-center justify-center'>
+    <div className='grid-container max-w-lg max-h-screen grid grid-cols-12 items-center justify-center'>
+          <div className='col-span-1'></div>
           <HorizontalLabel />
-          <div className='flex flex-row'>
-            <VerticalLabel />
-            <div className="w-96 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
-              {
-                isWhite && board.squares.map((square, index) => (
-              <SquareDisplay 
-                isWhite={isWhite}
-                key={index} 
-                index={index} 
-                square={square}
-                board={board}
-                selectedSquare={selectedSquare} 
-                legalMoves={legalMoves}
-                setSelectedSquare={setSelectedSquare}
-                handlePieceMove={handlePieceMove}
-                setLegalMoves={setLegalMoves}
-                handleRequestLegalMoves={handleRequestLegalMoves}
-                  /> ))
-              }
-              {
-                !isWhite && board.squares.slice().reverse().map((square, index) => (
-              <SquareDisplay
-                isWhite={isWhite}
-                key={blackIndex(index)}
-                index={blackIndex(index)}
-                square={square}
-                board={board}
-                selectedSquare={selectedSquare}
-                legalMoves={legalMoves}
-                setSelectedSquare={setSelectedSquare}
-                handlePieceMove={handlePieceMove}
-                setLegalMoves={setLegalMoves}
-                handleRequestLegalMoves={handleRequestLegalMoves}
-                  /> ))
-              }
-            </div>
-            <VerticalLabel />
+          <div className='col-span-1'></div>
+          <VerticalLabel />
+          <div className="col-span-10 aspect-square grid grid-cols-8 grid-rows-8 shadow-xl">
+            {
+              isWhite && board.squares.map((square, index) => (
+            <SquareDisplay 
+              isWhite={isWhite}
+              key={index} 
+              index={index} 
+              square={square}
+              board={board}
+              selectedSquare={selectedSquare} 
+              legalMoves={legalMoves}
+              setSelectedSquare={setSelectedSquare}
+              handlePieceMove={handlePieceMove}
+              setLegalMoves={setLegalMoves}
+              handleRequestLegalMoves={handleRequestLegalMoves}
+                /> ))
+            }
+            {
+              !isWhite && board.squares.slice().reverse().map((square, index) => (
+            <SquareDisplay
+              isWhite={isWhite}
+              key={blackIndex(index)}
+              index={blackIndex(index)}
+              square={square}
+              board={board}
+              selectedSquare={selectedSquare}
+              legalMoves={legalMoves}
+              setSelectedSquare={setSelectedSquare}
+              handlePieceMove={handlePieceMove}
+              setLegalMoves={setLegalMoves}
+              handleRequestLegalMoves={handleRequestLegalMoves}
+                /> ))
+            }
           </div>
+          <VerticalLabel />
+          <div className='col-span-1'></div>
           <HorizontalLabel />
+          <div className='col-span-1'></div>
         </div>
   )
 }
@@ -487,7 +487,7 @@ function ErrorMsg (props) {
 
 function VerticalLabel () {
   return (
-    <div className="w-12 h-96 flex flex-col items-center justify-around">
+    <div className="col-span-1 h-full flex flex-col items-center justify-around">
       <p className="text-stone-400 text-md font-mono font-thin">8</p>
       <p className="text-stone-400 text-md font-mono font-thin">7</p>
       <p className="text-stone-400 text-md font-mono font-thin">6</p>
@@ -502,7 +502,7 @@ function VerticalLabel () {
 
 function HorizontalLabel () {
   return (
-    <div className="w-96 h-12 flex flex-row items-center justify-around">
+    <div className="col-span-10 py-2 flex flex-row items-center justify-around">
       <p className="text-stone-400 text-md font-mono font-thin">a</p>
       <p className="text-stone-400 text-md font-mono font-thin">b</p>
       <p className="text-stone-400 text-md font-mono font-thin">c</p>
